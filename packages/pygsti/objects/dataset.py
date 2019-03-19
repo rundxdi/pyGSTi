@@ -845,7 +845,7 @@ class DataSet(object):
         method : {'all_outcomes-1', 'present_outcomes-1'}
             How the degrees of freedom should be computed. 'all_outcomes-1' takes
             the number of circuits and multiplies this by the *total* number of outcomes
-            (the length of what is returned by `get_outcome_labels()`) minus one.  
+            (the length of what is returned by `get_outcome_labels()`) minus one.
             'present_outcomes-1' counts on a per-circuit basis the number of
             present (usually = non-zero) outcomes recorded minus one.  For timestamped
             data, see `aggreate_times` below.
@@ -853,7 +853,7 @@ class DataSet(object):
         aggregate_times : bool, optional
             Whether counts that occur at different times should be tallied separately.
             If True, then even when counts occur at different times degrees of freedom
-            are tallied on a per-circuit basis.  If False, then counts occuring at 
+            are tallied on a per-circuit basis.  If False, then counts occuring at
             distinct times are treated as independent of those an any other time, and
             are tallied separately.  So, for example, if `aggregate_times` is False and
             a data row has 0- and 1-counts of 45 & 55 at time=0 and 42 and 58 at time=1
@@ -975,7 +975,7 @@ class DataSet(object):
         self.add_raw_series_data(circuit, outcomeLabelList, timeStampList,
                                  countList, overwriteExisting, recordZeroCnts,
                                  aux)
-        
+
 
     def add_raw_series_data(self, circuit, outcomeLabelList, timeStampList,
                             repCountList=None, overwriteExisting=True,
@@ -1134,7 +1134,7 @@ class DataSet(object):
                                         expanded_timeList, expanded_repList,
                                         overwriteExisting, aux=aux)
 
-    
+
     def add_auxiliary_info(self, circuit, aux):
         """
         Add auxiliary meta information to `circuit`.
@@ -1153,7 +1153,7 @@ class DataSet(object):
         None
         """
         self.auxInfo[circuit].clear() # needed? (could just update?)
-        self.auxInfo[circuit].update(aux) 
+        self.auxInfo[circuit].update(aux)
 
 
     def add_counts_from_dataset(self, otherDataSet):
@@ -1279,7 +1279,7 @@ class DataSet(object):
             trunc_dataset = DataSet(self.oliData, self.timeData, self.repData,
                                     circuitIndices=trunc_cirIndex,
                                     outcomeLabelIndices=self.olIndex, bStatic=True) #don't copy counts, just reference
-            
+
         else:
             trunc_dataset = DataSet(outcomeLabels=self.get_outcome_labels())
             for opstr in _lt.remove_duplicates(listOfCircuitsToKeep):
@@ -1301,7 +1301,7 @@ class DataSet(object):
         if len(missingStrs) > 0:
             missingStrs.append("...") # so elipses are shown when there's more strings
             _warnings.warn(("DataSet.truncate(...) was given %s strings to keep"
-                            " that weren't in the original dataset:\n%s") % 
+                            " that weren't in the original dataset:\n%s") %
                            (len(missingStrs)-1, "\n".join(map(str,missingStrs[0:10]))))
 
         return trunc_dataset
@@ -1473,16 +1473,16 @@ class DataSet(object):
                 raise ValueError("Invalid `missingAction`: %s" % str(missingAction))
 
         # the actual removal operations
-        self._remove(gstr_indices) 
+        self._remove(gstr_indices)
         for ky in auxkeys_to_remove:
              del self.auxInfo[ky]
 
         if len(missingStrs) > 0: #Print a warning with missing strings
             missingStrs.append("...") # so elipses are shown when there's more strings
             _warnings.warn(("DataSet.remove(...) cannot remove %s strings because"
-                            " they don't exist in the original dataset:\n%s") % 
+                            " they don't exist in the original dataset:\n%s") %
                            (len(missingStrs)-1, "\n".join(map(str,missingStrs[0:10]))))
-            
+
 
     def _remove(self, gstr_indices):
         """ Removes the data in indices given by gstr_indices """
@@ -1495,16 +1495,16 @@ class DataSet(object):
         inds = sorted(list(gstr_indices))
 
         #remove indices from lists (high->low)
-        for i in reversed(inds): 
+        for i in reversed(inds):
             del self.oliData[i]
             del self.timeData[i]
             if self.repData:
                 del self.repData[i]
-            
+
         #remove elements of cirIndex assoc. w/deleted indices
         keys_to_delete = []; inds_set = set(inds)
         for k,v in self.cirIndex.items():
-            if v in inds_set: 
+            if v in inds_set:
                 keys_to_delete.append(k)
         for k in keys_to_delete:
             del self.cirIndex[k]
@@ -1512,11 +1512,11 @@ class DataSet(object):
         #adjust remaining indices in cirIndex
         inds_ar = _np.array(inds, _np.int64)
         for k in self.cirIndex.keys():
-            cnt = _bisect.bisect(inds_ar, self.cirIndex[k]) # cnt == number of removed 
+            cnt = _bisect.bisect(inds_ar, self.cirIndex[k]) # cnt == number of removed
             self.cirIndex[k] -= cnt                         # indices < self.cirIndex[k]
 
 
-            
+
     def copy(self):
         """ Make a copy of this DataSet. """
         if self.bStatic:
@@ -1633,7 +1633,7 @@ class DataSet(object):
 
     def __setstate__(self, state_dict):
         bStatic = state_dict['bStatic']
-        
+
         if "gsIndexKeys" in state_dict:
             _warnings.warn("Unpickling a deprecated-format DataSet.  Please re-save/pickle asap.")
             cirIndexKeys = [ cgstr.expand() for cgstr in state_dict['gsIndexKeys'] ]
@@ -1785,7 +1785,7 @@ class DataSet(object):
                 for gstr,val in state_dict['auxInfo'].items():
                     new_aux_info[ _cir.Circuit(gstr._tup, stringrep=gstr._str) ] = val
                 state_dict['auxInfo'] = new_aux_info
-        
+
         def expand(x): #to be backward compatible
             """ Expand a compressed circuit """
             if isinstance(x,_cir.CompressedCircuit): return x.expand()
@@ -1859,7 +1859,7 @@ class DataSet(object):
             if _compat.isstr(old): old = (old,)
             if _compat.isstr(new): new = (new,)
             mapdict[old] = new
-            
+
         new_olIndex = _OrderedDict()
         for ol,i in self.olIndex.items():
             if ol in mapdict:
