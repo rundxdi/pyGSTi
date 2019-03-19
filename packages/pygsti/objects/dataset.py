@@ -25,6 +25,7 @@ from collections import defaultdict as _DefaultDict
 
 from ..tools import listtools as _lt
 from ..tools import compattools as _compat
+from ..tools.legacytools import deprecated_fn
 
 from . import circuit as _cir
 from . import labeldicts as _ld
@@ -1614,22 +1615,29 @@ class DataSet(object):
         self.uuid = _uuid.uuid4()
 
     def __getstate__(self):
-        toPickle = { 'cirIndexKeys': list(map(_cir.CompressedCircuit, self.cirIndex.keys())),
-                     'cirIndexVals': list(self.cirIndex.values()),
-                     'olIndex': self.olIndex,
-                     'ol': self.ol,
-                     'bStatic': self.bStatic,
-                     'oliData': self.oliData,
-                     'timeData': self.timeData,
-                     'repData': self.repData,
-                     'oliType': _np.dtype(self.oliType).str,
-                     'timeType': _np.dtype(self.timeType).str,
-                     'repType': _np.dtype(self.repType).str,
-                     'collisionAction': self.collisionAction,
-                     'uuid' : self.uuid,
-                     'auxInfo': self.auxInfo,
-                     'comment': self.comment}
-        return toPickle
+        # XXX should really just subclass static datasets
+        def _serialize_data(arr):
+            if arr is not None:
+                if self.bStatic:
+                    return arr.tobytes()
+                else:
+                    return [d.tobytes() for d in arr]
+
+        return { 'cirIndexKeys': list(map(_cir.CompressedCircuit, self.cirIndex.keys())) if self.cirIndex else [],
+                 'cirIndexVals': list(self.cirIndex.values()) if self.cirIndex else [],
+                 'olIndex': self.olIndex,
+                 'ol': self.ol,
+                 'bStatic': self.bStatic,
+                 'oliData': _serialize_data(self.oliData),
+                 'timeData': _serialize_data(self.timeData),
+                 'repData': _serialize_data(self.repData),
+                 'oliType': _np.dtype(self.oliType).str,
+                 'timeType': _np.dtype(self.timeType).str,
+                 'repType': _np.dtype(self.repType).str,
+                 'collisionAction': self.collisionAction,
+                 'uuid' : self.uuid.bytes if self.uuid is not None else None,
+                 'auxInfo': self.auxInfo,
+                 'comment': self.comment }
 
     def __setstate__(self, state_dict):
         bStatic = state_dict['bStatic']
@@ -1672,12 +1680,32 @@ class DataSet(object):
             self.cirIndex = cirIndex
             self.olIndex = state_dict['olIndex']
             self.ol = state_dict['ol']
-            self.oliData  = state_dict['oliData']
-            self.timeData = state_dict['timeData']
-            self.repData  = state_dict['repData']
             self.oliType  = _np.dtype(state_dict['oliType'])
             self.timeType = _np.dtype(state_dict['timeType'])
             self.repType  = _np.dtype(state_dict['repType'])
+
+            def _compat_data(key, dtype): # TODO fix me
+                if key in state_dict:
+                    # If data was not pickled, it was serialized to the same file by numpy.save
+                    data = state_dict[key]
+                    if bStatic:
+                        if isinstance(data, bytes):
+                            # Serialized to bytes
+                            return _np.frombuffer(data, dtype=dtype)
+                        else:
+                            return data
+                    else:
+                        if isinstance(data[0], bytes):
+                            # Serialized to bytes
+                            return [_np.frombuffer(d, dtype=dtype) for d in data]
+                        else:
+                            # Deprecated behavior -- just pickled
+                            return data
+
+            self.oliData = _compat_data('oliData', self.oliType)
+            self.timeData = _compat_data('timeData', self.timeType)
+            self.repData = _compat_data('repData', self.repType)
+
             self.comment  = state_dict.get('comment','')
             if bStatic: #always empty - don't save this, just init
                 self.cnt_cache = { opstr:_ld.OutcomeLabelDict() for opstr in self.cirIndex }
@@ -1688,11 +1716,16 @@ class DataSet(object):
             self.auxInfo = _DefaultDict(dict, self.auxInfo)
             # some types of serialization (e.g. JSON) just save a *normal* dict
             # so promote to a defaultdict if needed..
-            
+
         self.collisionAction = state_dict.get('collisionAction','aggregate')
-        self.uuid = state_dict.get('uuid',None)
 
-
+        uuid = state_dict.get('uuid', None)
+        if isinstance(uuid, bytes):
+            # Serialized to bytes
+            self.uuid = _uuid.UUID(bytes=uuid)
+        else:
+            # Deprecated behavior -- just pickled
+            self.uuid = uuid
 
     def save(self, fileOrFilename):
         """
@@ -1709,21 +1742,6 @@ class DataSet(object):
         None
         """
 
-        toPickle = { 'cirIndexKeys': list(map(_cir.CompressedCircuit, self.cirIndex.keys())) if self.cirIndex else [],
-                     'cirIndexVals': list(self.cirIndex.values()) if self.cirIndex else [],
-                     'olIndex': self.olIndex,
-                     'ol': self.ol,
-                     'bStatic': self.bStatic,
-                     'oliType': self.oliType,
-                     'timeType': self.timeType,
-                     'repType': self.repType,
-                     'useReps': bool(self.repData is not None),
-                     'collisionAction': self.collisionAction,
-                     'uuid' : self.uuid,
-                     'auxInfo': self.auxInfo,
-                     'comment': self.comment } #Don't pickle counts numpy data b/c it's inefficient
-        if not self.bStatic: toPickle['nRows'] = len(self.oliData)
-
         bOpen = _compat.isstr(fileOrFilename)
         if bOpen:
             if fileOrFilename.endswith(".gz"):
@@ -1734,22 +1752,17 @@ class DataSet(object):
         else:
             f = fileOrFilename
 
-        _pickle.dump(toPickle,f)
-        if self.bStatic:
-            _np.save(f, self.oliData)
-            _np.save(f, self.timeData)
-            if self.repData is not None:
-                _np.save(f, self.repData)
-        else:
-            for row in self.oliData: _np.save(f, row)
-            for row in self.timeData: _np.save(f, row)
-            if self.repData is not None:
-                for row in self.repData: _np.save(f, row)
+        _pickle.dump(self, f)
         if bOpen: f.close()
 
+    @deprecated_fn('pygsti.objects.dataset.load')
     def load(self, fileOrFilename):
         """
         Load DataSet from a file, clearing any data is contained previously.
+
+        ..deprecated:: 0.9.7.2
+            `DataSet.load` will be removed in the future. Instead use
+            the module-level function `dataset.load`.
 
         Parameters
         ----------
@@ -1808,9 +1821,15 @@ class DataSet(object):
         self.timeType= state_dict['timeType']
         self.repType = state_dict['repType']
         self.collisionAction = state_dict['collisionAction']
-        self.uuid    = state_dict['uuid']
         self.auxInfo = state_dict.get('auxInfo', _DefaultDict(dict)) #backward compat
         self.comment = state_dict.get('comment', '') # backward compat
+
+
+        uuid = state_dict.get('uuid', None)
+        if uuid is None or isinstance(uuid, _uuid.UUID):
+            self.uuid = uuid
+        else:
+            self.uuid = _uuid.UUID(uuid)
 
         useReps = state_dict['useReps']
 
@@ -1870,3 +1889,34 @@ class DataSet(object):
         #Note: rebuild reverse-dict self.ol:
         self.olIndex = new_olIndex
         self.ol = _OrderedDict( [(i,ol) for (ol,i) in self.olIndex.items()] )
+
+def load(fileOrFilename):
+    """Load DataSet from a file, clearing any data is contained previously.
+
+    Parameters
+    ----------
+    fileOrFilename string or file object.
+        If a string,  interpreted as a filename.  If this filename ends
+        in ".gz", the file will be gzip uncompressed as it is read.
+
+    Returns
+    -------
+    A DataSet loaded from the given file.
+    """
+    bOpen = _compat.isstr(fileOrFilename)
+    if bOpen:
+        if fileOrFilename.endswith(".gz"):
+            import gzip as _gzip
+            f = _gzip.open(fileOrFilename,"rb")
+        else:
+            f = open(fileOrFilename,"rb")
+    else:
+        f = fileOrFilename
+
+    ds = _pickle.load(f)
+    if bOpen: f.close()
+    if isinstance(ds, dict):
+        # Legacy behavior
+        return DataSet(fileToLoadFrom=fileOrFilename)
+    else:
+        return ds
