@@ -15,5 +15,5 @@ from . import sample
 from . import io
 from . import dataset
 from .benchmarker import Benchmarker
-from . import simulate
+#from . import simulate
 from . import analysis
