@@ -101,7 +101,7 @@ class Benchmarker(object):
             self.predicted_summary_data = predicted_summary_data.copy()
 
     def select_volumetric_benchmark_regions(self, depths, boundary, widths='all', datatype='success_probabilities', 
-                                            statistic='mean', merit = 'aboveboundary', specs=None, aggregate=True,
+                                            statistic='mean', merit = 'aboveboundary', specs=None, multipass_strategy='aggregate',
                                             passnum=None, rescaler='auto'):
 
 
@@ -124,7 +124,7 @@ class Benchmarker(object):
                         specsbywidth[w] = []
                     specsbywidth[w].append((ind, qs))
 
-        if not aggregate:
+        if multipass_strategy == 'seperate':
             assert(passnum is not None), "Must specify the passnumber data to use for selection if not aggregating!"
 
         for w, specsforw in specsbywidth.items():
@@ -142,9 +142,9 @@ class Benchmarker(object):
                 best_vb_at_best_boundary_index = None
                 for (ind, qs) in specsforw:
                     vbdata = self.get_volumetric_benchmark_data(depths, widths=[w,], datatype=datatype, statistic=statistic, 
-                                                           specs={ind: [qs,]},  aggregate=aggregate,  rescaler=rescaler)['data']
+                                                           specs={ind: [qs,]},  multipass_strategy=multipass_strategy,  rescaler=rescaler)['data']
                     # Only looking at 1 width, so drop the width key, and keep only the depths with data
-                    if not aggregate: 
+                    if not multipass_strategy == 'aggregate' or multipass_strategy == 'concatenate':
                         vbdata = {d:vbdata[d][w][passnum] for d in vbdata.keys() if w in vbdata[d].keys()}
                     else:
                         vbdata = {d:vbdata[d][w] for d in vbdata.keys() if w in vbdata[d].keys()}
@@ -194,13 +194,14 @@ class Benchmarker(object):
         return selected_regions     
 
     def get_volumetric_benchmark_data(self, depths, widths='all', datatype='success_probabilities', 
-                                      statistic='mean', specs=None,  aggregate=True,  rescaler='auto'):
+                                      statistic='mean', specs=None, multipass_strategy='aggregate',
+                                      rescaler='auto'):
 
         # maxmax : max over all depths/widths larger or equal
         # minmin : min over all deoths/widths smaller or equal.
         
         assert(statistic in ('max', 'mean', 'min', 'dist', 'maxmax', 'minmin'))
-
+        assert(multipass_strategy in ('aggregate', 'seperate', 'concatenate'))
 
         if isinstance(widths, str):
             assert(widths == 'all')
@@ -216,9 +217,11 @@ class Benchmarker(object):
                 w = len(qs)
                 if widths == 'all' or w in widths:
                     if w not in width_to_spec:
-                        width_to_spec[w] = (i, qs)
+                        width_to_spec[w] = [(i, qs),]
                     else:
-                        raise ValueError("There are multiple qubit subsets of size {} benchmarked! Cannot have specs as None!".format(w))
+                        width_to_spec[w].append((i,qs))
+                        print("There are multiple specs being used!")
+                        #raise ValueError("There are multiple qubit subsets of size {} benchmarked! Cannot have specs as None!".format(w))
 
         if widths == 'all':
             widths = list(width_to_spec.keys())
@@ -253,14 +256,14 @@ class Benchmarker(object):
         qs = self._specs[0].get_structure()[0]  # An arbitrary key 
         if datatype in self.pass_summary_data[0][qs].keys():
             datadict = self.pass_summary_data
-            globaldata = False 
+            globaldata = False
         elif datatype in self.global_summary_data[0][qs].keys():
             datadict = self.global_summary_data
             globaldata = True
         else:
             raise ValueError("Unknown datatype!")
 
-        if aggregate or globaldata:
+        if multipass_strategy == 'aggregate' or multipass_strategy == 'concatenate' or globaldata:
             vb = {d: {} for d in depths}
             fails = {d: {} for d in depths}
         else:
@@ -277,16 +280,18 @@ class Benchmarker(object):
                 predictedvb = {pkey: None for pkey in self.predicted_summary_data.keys()}
 
         for w in widths:
-            (i, qs) = width_to_spec[w]
-            data = datadict[i][qs][datatype]
+            #(i, qs) = width_to_spec[w]
+            data = [datadict[i][qs][datatype] for (i, qs) in width_to_spec[w]]
             if dopredictions:
-                preddata = {pkey: self.predicted_summary_data[pkey][i][qs][datatype] for pkey in pkeys}
+                preddata = {pkey: [self.predicted_summary_data[pkey][i][qs][datatype] for (i, qs) in width_to_spec[w]] for pkey in pkeys}
             for d in depths:
-                if d in data.keys():
-                    
-                    dline = data[d]
- 
+                if d in data[0].keys():  # Assumes the same keys
+
                     if globaldata:
+
+                        dline = []
+                        for i in range(len(data)):
+                            dline = dline + data[i][d]  # Concatenate the lists.
 
                         failcount = _np.sum(_np.isnan(dline))
                         fails[d][w] = (len(dline) - failcount, failcount)
@@ -305,23 +310,48 @@ class Benchmarker(object):
                                 vb[d][w] = _np.nan
 
                     else:
+                        numpasses = len(data[0][list(data[0].keys())[0]])
+                        dline = [[] for i in range(numpasses)]
+                        for passnum in range(numpasses):
+                            for j in range(len(data)):
+                                dline[passnum] = dline[passnum] + data[j][d][passnum]  # Concatenate the lists.
                         failline = [(len(dpass) - _np.sum(_np.isnan(dpass)), _np.sum(_np.isnan(dpass))) for dpass in dline]
 
-                        if statistic == 'max' or statistic == 'maxmax':
-                            vbdataline = [_np.nanmax(rescale_function(dpass,w)) if not _np.isnan(rescale_function(dpass,w)).all() else _np.nan for dpass in dline]
-                        elif statistic == 'mean':
-                            vbdataline = [_np.nanmean(rescale_function(dpass,w)) if not _np.isnan(rescale_function(dpass,w)).all() else _np.nan for dpass in dline]
-                        elif statistic == 'min' or statistic == 'minmin':
-                            vbdataline = [_np.nanmin(rescale_function(dpass,w)) if not _np.isnan(rescale_function(dpass,w)).all() else _np.nan for dpass in dline]
-                        elif statistic == 'dist':
-                            vbdataline = [rescale_function(dpass, w) for dpass in dline]
+                        
+                        if multipass_strategy == 'seperate' or multipass_strategy == 'concatenate':
 
-                        if not aggregate:
-                            for i in range(len(vb)):
-                                vb[i][d][w] = vbdataline[i]
-                                fails[i][d][w] = failline[i]
+                            if statistic == 'max' or statistic == 'maxmax':
+                                vbdataline = [_np.nanmax(rescale_function(dpass,w)) if not _np.isnan(rescale_function(dpass,w)).all() else _np.nan for dpass in dline]
+                            elif statistic == 'mean':
+                                vbdataline = [_np.nanmean(rescale_function(dpass,w)) if not _np.isnan(rescale_function(dpass,w)).all() else _np.nan for dpass in dline]
+                            elif statistic == 'min' or statistic == 'minmin':
+                                vbdataline = [_np.nanmin(rescale_function(dpass,w)) if not _np.isnan(rescale_function(dpass,w)).all() else _np.nan for dpass in dline]
+                            elif statistic == 'dist':
+                                vbdataline = [rescale_function(dpass, w) for dpass in dline]
 
-                        if aggregate:
+                            if multipass_strategy == 'seperate':
+                                for i in range(len(vb)):
+                                    vb[i][d][w] = vbdataline[i]
+                                    fails[i][d][w] = failline[i]
+
+                            if multipass_strategy == 'concatenate':
+                                if statistic == 'max' or statistic == 'maxmax':
+                                    vb[d][w] = _np.nanmax(vbdataline)
+                                elif statistic == 'mean':
+                                    vb[d][w] =  _np.nanmean(vbdataline)
+                                elif statistic == 'min' or statistic == 'minmin':
+                                    vb[d][w] = _np.nanmin(vbdataline)
+                                elif statistic == 'dist':
+                                    vb[d][w] = [item for sublist in vbdataline for item in sublist]
+
+                                successcount = 0
+                                failcount = 0
+                                for (successcountpass, failcountpass) in failline:
+                                    successcount += successcountpass
+                                    failcount += failcountpass
+                                    fails[d][w] = (successcount, failcount)
+
+                        elif multipass_strategy == 'aggregate':
 
                             successcount = 0
                             failcount = 0
@@ -330,8 +360,11 @@ class Benchmarker(object):
                                 failcount += failcountpass
                                 fails[d][w] = (successcount, failcount)
 
+                            # This assumes data that combines linearly!
+                            vbdataline = rescale_function(list(_np.mean(_np.array(dline), 0)),w)
+                            #print(vbdataline)
                             if statistic == 'dist':
-                                vb[d][w] = [item for sublist in vbdataline for item in sublist]
+                                vb[d][w] = vbdataline
                             else:
                                 if not _np.isnan(vbdataline).all():
                                     if statistic == 'max' or statistic == 'maxmax':
@@ -345,22 +378,24 @@ class Benchmarker(object):
 
                     # Repeat the process for the predictions, but with simpler code as don't have to deal with passes or NaNs.
                     if dopredictions:
-                        pdline = {pkey: preddata[pkey][d] for pkey in pkeys}
                         for pkey in pkeys:
+                            pdline = [] 
+                            for i in range(len(preddata[pkey])):
+                                pdline = pdline + preddata[pkey][i][d]
                             if statistic == 'dist':
-                                predictedvb[pkey][d][w] = rescale_function(pdline[pkey], w)
+                                predictedvb[pkey][d][w] = rescale_function(pdline, w)
                             if statistic == 'max' or statistic == 'maxmax':
-                                predictedvb[pkey][d][w] = _np.max(rescale_function(pdline[pkey], w))
+                                predictedvb[pkey][d][w] = _np.max(rescale_function(pdline, w))
                             if statistic == 'mean':
-                                predictedvb[pkey][d][w] = _np.mean(rescale_function(pdline[pkey], w))
+                                predictedvb[pkey][d][w] = _np.mean(rescale_function(pdline, w))
                             if statistic == 'min'  or statistic == 'minmin':
-                                predictedvb[pkey][d][w] = _np.min(rescale_function(pdline[pkey], w))
+                                predictedvb[pkey][d][w] = _np.min(rescale_function(pdline, w))
 
 
         if statistic == 'minmin' or statistic == 'maxmax':
-            if aggregate:
+            if multipass_strategy == 'aggregate' or multipass_strategy == 'concatenate':
                 for d in vb.keys():
-                    for w in vb[d].keys():       
+                    for w in vb[d].keys():
                         for d2 in vb.keys():
                             for w2 in vb[d2].keys():
                                 if statistic == 'minmin' and d2 <= d and w2 <= w and vb[d2][w2] <  vb[d][w]:
