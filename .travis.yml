@@ -98,6 +98,9 @@ jobs:
       python: 3.5
       # MPI nose utils needs sys.path
       env: NOSE_WHERE="test/test_packages/" NOSE_NOPATH="" NOSETESTS="mpi"
+    - stage: test-extra
+      python: 3.6
+      env: NOSE_WHERE="test/test_packages/" NOSETESTS="notebooks"
 
     - stage: push
       env: PUSH_BRANCH="beta"

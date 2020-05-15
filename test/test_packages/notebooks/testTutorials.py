@@ -1,4 +1,4 @@
-from notebookstestcase import _PYGSTI_ROOT, notebooks_in_path, run_notebook
+from .notebookstestcase import _PYGSTI_ROOT, notebooks_in_path, run_notebook
 from nose.plugins.attrib import attr
 from pathlib import Path
 from tempfile import TemporaryDirectory

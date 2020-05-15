@@ -57,16 +57,19 @@ extras = {
         'cvxopt',
         'cvxpy',
         'cython',
+        'jinja2',
         'matplotlib',
         'mpi4py',
         'msgpack',
+        'nbconvert',
+        'nbformat',
         'nose',
         'nose-timer',
+        'notebook',
         'pandas',
         'psutil',
         'rednose',
         'zmq',
-        'jinja2'
     ]
 }
 
