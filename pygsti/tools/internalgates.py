@@ -409,6 +409,11 @@ def standard_gatenames_openqasm_conversions():
     std_gatenames_to_qasm['Gcnot'] = 'cx'
     std_gatenames_to_qasm['Gswap'] = 'swap'
 
+    std_gatenames_to_qasm['Gxxpi2'] = 'pygstixxpi2'
+    std_gatenames_to_qasm['Gxypi2'] = 'pygstixypi2'
+    std_gatenames_to_qasm['Gxypi2'] = 'pygstiyxpi2'
+    std_gatenames_to_qasm['Gyypi2'] = 'pygstiyypi2'
+
     std_gatenames_to_qasm['Gc0'] = 'u3(0, 0, 0)'  # [0, 0, 0] * pi/2 (thi is Gi)
     std_gatenames_to_qasm['Gc1'] = 'u3(1.570796326794897, 0, 1.570796326794897)'  # [1, 0, 1] * pi/2
     std_gatenames_to_qasm['Gc2'] = 'u3(1.570796326794897, 1.570796326794897, 3.141592653589793)'  # [1, 1, 2] * pi/2

@@ -3484,6 +3484,27 @@ class Circuit(object):
         # Init the openqasm string.
         openqasm = 'OPENQASM 2.0;\ninclude "qelib1.inc";\n\n'
 
+        openqasm +=  '''gate pygstixxpi2 a, b {
+  u3(1.570796326794897, 4.71238898038469, 1.570796326794897) a;
+  u3(1.570796326794897, 4.71238898038469, 1.570796326794897) b;
+}
+
+gate pygstixypi2 a, b {
+  u3(1.570796326794897, 4.71238898038469, 1.570796326794897) a;
+  u3(1.570796326794897, 0, 0) b;
+}
+
+gate pygstiyxpi2 a, b {
+  u3(1.570796326794897, 0, 0) a;
+  u3(1.570796326794897, 4.71238898038469, 1.570796326794897) b;
+}
+
+gate pygstiyypi2 a, b {
+  u3(1.570796326794897, 0, 0) a;
+  u3(1.570796326794897, 0, 0) b;
+}
+'''
+
         openqasm += 'qreg q[{0}];\n'.format(str(num_qubits))
         # openqasm += 'creg cr[{0}];\n'.format(str(num_qubits))
         openqasm += 'creg cr[{0}];\n'.format(str(num_qubits + num_IMs))
