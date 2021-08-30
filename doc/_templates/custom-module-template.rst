@@ -31,7 +31,7 @@
    .. rubric:: {{ _('Classes') }}
 
    .. autosummary::
-      :toctree:                                                        
+      :toctree:
    {% for item in classes %}
       {{ item }}
    {%- endfor %}
@@ -55,11 +55,29 @@
 .. rubric:: Modules
 
 .. autosummary::
-   :toctree:
-   :template: custom-module-template.rst               
+   :toctree:               
    :recursive:
 {% for item in modules %}
    {{ item }}
 {%- endfor %}
 {% endif %}
 {% endblock %}
+
+
+{% block inheritance %}
+{% if classes %}
+.. rubric:: Inheritance Diagram
+
+.. autosummary::
+{% for item in classes %}
+.. inheritance-diagram:: {{item}}
+   :parts: 1
+{%- endfor %}
+{% endif %}
+{% endblock %}
+
+
+
+
+
+
