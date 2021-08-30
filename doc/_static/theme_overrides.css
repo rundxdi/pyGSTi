@@ -1,0 +1,12 @@
+img.graphviz {
+    border: 0;
+    max-width: max-content;
+    max-height:max-content;
+    overflow-x: scroll;
+}
+
+object.graphviz {
+    max-width: max-content;
+    max-height:max-content;
+    overflow-x: scroll;
+}
