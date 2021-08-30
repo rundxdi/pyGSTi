@@ -40,7 +40,9 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
-    'numpydoc'
+    'numpydoc',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.graphviz'
 ]
 
 autosummary_generate = True
@@ -162,7 +164,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -317,3 +319,17 @@ from __future__ import division, print_function
 import numpy as np
 import pygsti
 '''
+
+#Graphviz options relevant to inheritance diagram creation
+inheritance_graph_attrs = dict(size='""',fontsize="10")
+#inheritance_node_attrs = dict(height=.5,width=1)
+
+
+#overide default graphviz css settings for the inheritance diagrams
+#easier than trying to figure out how to adjust some of these things in the graphviz attributes:
+def setup(app):
+    app.add_css_file('theme_overrides.css')
+
+html_context = {
+    'css_files': ['_static/theme_overrides.css'],
+}
