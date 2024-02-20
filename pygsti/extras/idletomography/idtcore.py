@@ -55,9 +55,12 @@ def anti_commute(mat1, mat2):
 # AND NOT THE "ABBREVIATED" PAULIS
 
 
+# REVIEW removing factor of 2 with alternative multiqubit pauli generation from Corey
+
+
 # Hamiltonian Error Generator
 def hamiltonian_error_generator(initial_state, indexed_pauli, identity):
-    return 2 * (
+    return 1 * (
         -1j * indexed_pauli @ initial_state @ identity
         + 1j * identity @ initial_state @ indexed_pauli
     )
@@ -65,7 +68,7 @@ def hamiltonian_error_generator(initial_state, indexed_pauli, identity):
 
 # Stochastic Error Generator
 def stochastic_error_generator(initial_state, indexed_pauli, identity):
-    return 2 * (
+    return 1 * (
         indexed_pauli @ initial_state @ indexed_pauli
         - identity @ initial_state @ identity
     )
@@ -77,7 +80,7 @@ def pauli_correlation_error_generator(
     pauli_index_1,
     pauli_index_2,
 ):
-    return 2 * (
+    return 1 * (
         pauli_index_1 @ initial_state @ pauli_index_2
         + pauli_index_2 @ initial_state @ pauli_index_1
         - 0.5 * commute(commute(pauli_index_1, pauli_index_2), initial_state)
@@ -86,7 +89,7 @@ def pauli_correlation_error_generator(
 
 # Anti-symmetric Error Generator
 def anti_symmetric_error_generator(initial_state, pauli_index_1, pauli_index_2):
-    return 2j * (
+    return 1j * (
         pauli_index_1 @ initial_state @ pauli_index_2
         - pauli_index_2 @ initial_state @ pauli_index_1
         + 0.5
@@ -118,6 +121,7 @@ def convert_to_pauli(matrix, numQubits):
     coefs = _np.real_if_close(_np.dot(translationMatrix, matrix.flatten()))
     return [(a, b) for (a, b) in zip(coefs, pauliNames) if abs(a) > 0.0001]
 
+
 def convert_to_pauli_by_trace(matrix, numQubits):
     pp = Basis.cast("PP", dim=4**numQubits)
     # print(f"{pp.elements = }")
@@ -125,10 +129,15 @@ def convert_to_pauli_by_trace(matrix, numQubits):
     # print(f"{pp.ellookup = }")
     coef_list = []
     for lbl, elt in pp.ellookup.items():
-        coef_list.append((_np.real_if_close(_np.trace(elt.conj().T @ matrix)), lbl))
-    x = [True for coef in coef_list if abs(coef[0]) > 0.0001]
-    if len(x) > 1:
-        raise ValueError
+        coef_list.append(
+            (
+                _np.real_if_close(_np.trace(elt.conj().T @ matrix)),
+                "+" + "+".join(i for i in lbl),
+            )
+        )
+    # x = [True for coef in coef_list if abs(coef[0]) > 0.0001]
+    # if len(x) > 1:
+    #     raise ValueError
     return coef_list
 
 
@@ -148,7 +157,7 @@ def gather_hamiltonian_jacobian_coefs(pauliDict, numQubits, printFlag=True):
     )
     # print(f"{pauliDict = }")
     # print(f"{pauliDictProduct = }")
-    
+
     paulis1Q = basisconstructors.pp_matrices_dict(2, normalize=False)
     for pauliPair in pauliDictProduct:
         for parity in parities:
@@ -178,12 +187,12 @@ def gather_hamiltonian_jacobian_coefs(pauliDict, numQubits, printFlag=True):
                 inputState, indexedPauli, ident
             )
             # print(f"{process_matrix = }")
-            decomposition = convert_to_pauli(process_matrix, numQubits)
+            # decomposition = convert_to_pauli(process_matrix, numQubits)
             # flag =False
             # if len(decomposition) > 0:
             #     print(decomposition)
             #     flag = True
-            # # decomposition = convert_to_pauli_by_trace(process_matrix,numQubits)
+            decomposition = convert_to_pauli_by_trace(process_matrix, numQubits)
             # if flag:
             #     print(decomposition)
             #     quit()
@@ -201,22 +210,23 @@ def gather_hamiltonian_jacobian_coefs(pauliDict, numQubits, printFlag=True):
                     hamiltonianErrorOutputs[
                         ((str(inputStateName), element[1]), pauliPair[1])
                     ] = element[0]
-            for element in decomposition:
-                if "I" in element[1]:
-                    print(element)
-                    new_strings = []
-                    if element[1].index("I") == 0:
-                        new_strings.append("+X" + element[1][1:])
-                        new_strings.append("+Y" + element[1][1:])
-                        new_strings.append("+Z" + element[1][1:])
-                    else:
-                        new_strings.append(element[1][0:2] + "+X")
-                        new_strings.append(element[1][0:2] + "+Y")
-                        new_strings.append(element[1][0:2] + "+Z")
-                    for stringl in new_strings:
-                        hamiltonianErrorOutputs[((str(inputStateName), stringl), pauliPair[1])] = element[0]
+            # for element in decomposition:
+            #     if "I" in element[1]:
+            #         print(element)
+            #         new_strings = []
+            #         if element[1].index("I") == 0:
+            #             new_strings.append("+X" + element[1][1:])
+            #             new_strings.append("+Y" + element[1][1:])
+            #             new_strings.append("+Z" + element[1][1:])
+            #         else:
+            #             new_strings.append(element[1][0:2] + "+X")
+            #             new_strings.append(element[1][0:2] + "+Y")
+            #             new_strings.append(element[1][0:2] + "+Z")
+            #         for stringl in new_strings:
+            #             hamiltonianErrorOutputs[
+            #                 ((str(inputStateName), stringl), pauliPair[1])
+            #             ] = element[0]
 
-                        
     # printFlag = True
     if printFlag:
         for key in hamiltonianErrorOutputs:
@@ -256,11 +266,11 @@ def gather_stochastic_jacobian_coefs(pauliDict, numQubits, printFlag=False):
                     inputStateItems[1] = inputState
                     inputStateItems.pop(0)
             indexedPauli = pauliDict[pauliPair[1]]
-            inputState = ident / 2 + inputState / 2
+            inputState = ident / (2**numQubits) + inputState / (2**numQubits)
 
             process_matrix = stochastic_error_generator(inputState, indexedPauli, ident)
 
-            decomposition = convert_to_pauli(process_matrix, numQubits)
+            decomposition = convert_to_pauli_by_trace(process_matrix, numQubits)
             for element in decomposition:
                 if "I" not in element[1]:
                     stochasticErrorOutputs[
@@ -308,11 +318,11 @@ def gather_pauli_correlation_jacobian_coefs(pauliDict, numQubits, printFlag=Fals
                     inputStateItems.pop(0)
             indexedPauli1 = pauliDict[pauliPair[1][0]]
             indexedPauli2 = pauliDict[pauliPair[1][1]]
-            inputState = ident / 2 + inputState / 2
+            inputState = ident / (2**numQubits) + inputState / (2**numQubits)
             process_matrix = pauli_correlation_error_generator(
                 inputState, indexedPauli1, indexedPauli2
             )
-            decomposition = convert_to_pauli(process_matrix, numQubits)
+            decomposition = convert_to_pauli_by_trace(process_matrix, numQubits)
             for element in decomposition:
                 if "I" not in element[1]:
                     pauliCorrelationErrorOutputs[
@@ -364,11 +374,11 @@ def gather_anti_symmetric_jacobian_coefs(pauliDict, numQubits, printFlag=False):
                     inputStateItems.pop(0)
             indexedPauli1 = pauliDict[pauliPair[1][0]]
             indexedPauli2 = pauliDict[pauliPair[1][1]]
-            inputState = ident / 2 + inputState / 2
+            inputState = ident / (2**numQubits) + inputState / (2**numQubits)
             process_matrix = anti_symmetric_error_generator(
                 inputState, indexedPauli1, indexedPauli2
             )
-            decomposition = convert_to_pauli(process_matrix, numQubits)
+            decomposition = convert_to_pauli_by_trace(process_matrix, numQubits)
             for element in decomposition:
                 if "I" not in element[1]:
                     antiSymmetricErrorOutputs[
@@ -383,7 +393,7 @@ def gather_anti_symmetric_jacobian_coefs(pauliDict, numQubits, printFlag=False):
 
 def build_class_jacobian(classification, numQubits):
     pauli_matrices = basisconstructors.pp_matrices_dict(2**numQubits, normalize=False)
-    print(len(pauli_matrices))
+    # print(len(pauli_matrices))
     identKey = "I" * numQubits
 
     # classification within ["H", "S", "C", "A"]
@@ -465,6 +475,7 @@ def dict_to_jacobian(coef_dict, classification, numQubits, all_fidpairs):
     # print(f"{coef_dict = }")
     # quit()
     for coef in coef_dict:
+        # print(f"{coef = }")
         row_index_coef = row_index_list.get(coef[0])
         col_index_coef = col_index_list.get(coef[1])
         if row_index_coef:
@@ -1483,8 +1494,9 @@ def do_idle_tomography(
         correlation_jacobian_coefs, "C", nqubits, all_fidpairs
     )
     print("C jacobian built")
-    # print(f"{correlation_index_list = }")
-    # print(f"{correlation_jacobian_coefs = }")
+    print(f"{correlation_index_list = }")
+    print(f"{correlation_jacobian_coefs = }")
+    print(f"{correlation_jacobian = }")
     # quit()
     # print(len(correlation_index_list))
     # quit()
@@ -1739,8 +1751,8 @@ def do_idle_tomography(
     # print(hamiltonian_jacobian[311,0:15])
     # quit()
 
-    testing_intrinsic_rates = _np.dot(hamil_jacobian_inv, obs_err_rates)
-    print(f"{testing_intrinsic_rates = }")
+    # testing_intrinsic_rates = _np.dot(hamil_jacobian_inv, obs_err_rates)
+    # print(f"{testing_intrinsic_rates = }")
     # hs_jac = _np.hstack([hamiltonian_jacobian, stochastic_jacobian])
     # hs_jac_inv = _np.linalg.pinv(hs_jac)
     # hs_intrinsic_rates = _np.dot(hs_jac_inv, obs_err_rates)
