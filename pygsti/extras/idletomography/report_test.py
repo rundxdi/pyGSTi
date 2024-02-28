@@ -20,7 +20,7 @@ from pygsti.extras.idletomography.pauliobjs import NQPauliState
 from pygsti.extras.idletomography.idtcore import idle_tomography_fidpairs
 
 # SECTION n_qubits
-n_qubits = 1
+n_qubits = 3
 
 fid_pairs = idle_tomography_fidpairs(n_qubits)
 # print(fid_pairs)
@@ -136,7 +136,7 @@ err_str = "HX"
 if n_qubits == 2:
     term_dict = {("H", "IX"): 0.001}
 elif n_qubits == 3:
-    term_dict = {("H", "XII"): 0.001}
+    term_dict = {("H", "XXI"): 0.001}
 else:
     term_dict = {("H", "X"): 0.001}
 # state_space = QubitSpace(n_qubits)
