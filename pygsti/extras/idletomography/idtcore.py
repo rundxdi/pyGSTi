@@ -124,17 +124,19 @@ def convert_to_pauli(matrix, numQubits):
 
 def convert_to_pauli_by_trace(matrix, numQubits):
     pp = Basis.cast("PP", dim=4**numQubits)
+    parities = list(product(["+", "-"], repeat=numQubits))
     # print(f"{pp.elements = }")
     # print(f"{pp.labels = }")
     # print(f"{pp.ellookup = }")
     coef_list = []
     for lbl, elt in pp.ellookup.items():
-        coef_list.append(
-            (
-                _np.real_if_close(_np.trace(elt.conj().T @ matrix)),
-                "+" + "+".join(i for i in lbl),
+        for parity in parities:
+            coef_list.append(
+                (
+                    _np.real_if_close(_np.trace(elt.conj().T @ matrix)),
+                    str(_itertools.cycle([parity, lbl])),
+                )
             )
-        )
     # x = [True for coef in coef_list if abs(coef[0]) > 0.0001]
     # if len(x) > 1:
     #     raise ValueError
@@ -1494,9 +1496,9 @@ def do_idle_tomography(
         correlation_jacobian_coefs, "C", nqubits, all_fidpairs
     )
     print("C jacobian built")
-    print(f"{correlation_index_list = }")
-    print(f"{correlation_jacobian_coefs = }")
-    print(f"{correlation_jacobian = }")
+    # print(f"{correlation_index_list = }")
+    # print(f"{correlation_jacobian_coefs = }")
+    # print(f"{correlation_jacobian = }")
     # quit()
     # print(len(correlation_index_list))
     # quit()
