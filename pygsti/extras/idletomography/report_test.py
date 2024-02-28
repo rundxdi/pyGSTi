@@ -134,11 +134,11 @@ else:
 
 err_str = "HX"
 if n_qubits == 2:
-    term_dict = {("H", "XI"): 0.001}
+    term_dict = {("H", "IX"): 0.001}
 elif n_qubits == 3:
     term_dict = {("H", "XII"): 0.001}
 else:
-    term_dict = {("A", "X", "Y"): 0.001}
+    term_dict = {("H", "X"): 0.001}
 # state_space = QubitSpace(n_qubits)
 # test_error_gen = LindbladErrorgen.from_elementary_errorgens(term_dict, state_space=state_space, parameterization='GLND')
 # test_error_gen.to_dense()
