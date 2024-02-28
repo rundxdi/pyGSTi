@@ -12,6 +12,7 @@ import collections as _collections
 import itertools as _itertools
 import time as _time
 import warnings as _warnings
+import more_itertools as _mi
 
 import numpy as _np
 
@@ -134,7 +135,7 @@ def convert_to_pauli_by_trace(matrix, numQubits):
             coef_list.append(
                 (
                     _np.real_if_close(_np.trace(elt.conj().T @ matrix)),
-                    str(_itertools.cycle([parity, lbl])),
+                    "".join(_mi.roundrobin(parity, lbl)),
                 )
             )
     # x = [True for coef in coef_list if abs(coef[0]) > 0.0001]
@@ -657,6 +658,52 @@ def dict_to_jacobian(coef_dict, classification, numQubits, all_fidpairs):
 #    return fidpairs
 
 
+# def idle_tomography_fidpairs(nqubits):
+#     """
+#     Construct a list of Pauli-basis fiducial pairs for idle tomography.
+
+#     This function simply does the most naive, symmetric experiment designations
+#     possible, which consists of all possible pairs of paulis, and all possible
+#     signs on the prep fiducial.
+
+#     Parameters
+#     ----------
+#     nqubits : int
+#         The number of qubits.
+
+#     Returns
+#     -------
+#     list
+#         a list of (prep,meas) 2-tuples of NQPauliState objects, each of
+#         length `nqubits`, representing the fiducial pairs.
+#     """
+
+#     pauli_strings = ["X", "Y", "Z"]
+#     nq_pauli_strings = list(
+#         product(pauli_strings, repeat=nqubits)
+#     )  # skip the all identity string]
+#     # nq_pauli_strings.pop(nq_pauli_strings.index("I"*nqubits))
+
+#     # we also want all possible combinations of sign for each the pauli
+#     # observable on each qubit. The NQPauliState expects these to be either 0
+#     # for + or 1 for -.
+
+#     signs = list(product([-1, 1], repeat=nqubits))
+
+#     fidpairs = []
+#     for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
+#         for sign in signs:
+#             fidpairs.append(
+#                 (
+#                     _pobjs.NQPauliState(prep_string, sign),
+#                     _pobjs.NQPauliState(meas_string, signs[-1]),
+#                 )
+#             )
+
+#     return fidpairs
+
+
+## REVIEW: this version below generates all parities of measurements
 def idle_tomography_fidpairs(nqubits):
     """
     Construct a list of Pauli-basis fiducial pairs for idle tomography.
@@ -686,15 +733,17 @@ def idle_tomography_fidpairs(nqubits):
     # we also want all possible combinations of sign for each the pauli
     # observable on each qubit. The NQPauliState expects these to be either 0
     # for + or 1 for -.
+
     signs = list(product([-1, 1], repeat=nqubits))
+    signs = list(product(signs, repeat=2))
 
     fidpairs = []
     for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
         for sign in signs:
             fidpairs.append(
                 (
-                    _pobjs.NQPauliState(prep_string, sign),
-                    _pobjs.NQPauliState(meas_string, signs[-1]),
+                    _pobjs.NQPauliState(prep_string, sign[0]),
+                    _pobjs.NQPauliState(meas_string, sign[1]),
                 )
             )
 
@@ -1459,7 +1508,7 @@ def do_idle_tomography(
     hamiltonian_jacobian_coefs = build_class_jacobian("H", nqubits)
     # print(hamiltonian_jacobian_coefs)
 
-    print("Hamiltonian Jacobian coefs found")
+    # print("Hamiltonian Jacobian coefs found")
     # print(f"{hamiltonian_jacobian_coefs = }")
     # for key in hamiltonian_jacobian_coefs.keys():
     #     print(key[1])
@@ -1470,7 +1519,7 @@ def do_idle_tomography(
     )
     # print(f"{hamiltonian_jacobian = }")
     # print(f"{hamiltonian_index_list = }")
-    # print(hamiltonian_jacobian[:,4])
+    # print(hamiltonian_jacobian[:, 4])
     # quit()
 
     print("Hamiltonian Jacobian built")
@@ -1551,7 +1600,7 @@ def do_idle_tomography(
     full_jacobian_inv = _np.linalg.pinv(full_jacobian)
     print("Jacobian inverse calculated")
 
-    hamil_jacobian_inv = _np.linalg.pinv(hamiltonian_jacobian)
+    # hamil_jacobian_inv = _np.linalg.pinv(hamiltonian_jacobian)
 
     # if "pauli_fidpairs" in advanced_options:
     #     fidpair_index_dict = dict(enumerate(advanced_options["pauli_fidpairs"]))
@@ -1782,7 +1831,7 @@ def do_idle_tomography(
         v: 0 for k in error_gen_index_list.keys() for v in error_gen_index_list[k]
     }
     for key, i in zip(intrinsic_rates.keys(), range(intrinsic_rate_list.shape[0])):
-        if i < 30:
+        if i >= 0:
             with _np.printoptions(precision=10):
                 print(f"{key}:  {intrinsic_rate_list[i]}")
         intrinsic_rates[key] = intrinsic_rate_list[i]

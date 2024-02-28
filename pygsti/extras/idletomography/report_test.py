@@ -20,34 +20,34 @@ from pygsti.extras.idletomography.pauliobjs import NQPauliState
 from pygsti.extras.idletomography.idtcore import idle_tomography_fidpairs
 
 # SECTION n_qubits
-n_qubits = 3
+n_qubits = 2
 
 fid_pairs = idle_tomography_fidpairs(n_qubits)
 # print(fid_pairs)
 # print(len(fid_pairs))
 
-if n_qubits == 1:
-    huh = [
-        (NQPauliState("X", (1,)), NQPauliState("X", (1,))),
-        (NQPauliState("X", (1,)), NQPauliState("Y", (1,))),
-        (NQPauliState("X", (1,)), NQPauliState("Z", (1,))),
-        (NQPauliState("Y", (1,)), NQPauliState("X", (1,))),
-        (NQPauliState("Y", (1,)), NQPauliState("Y", (1,))),
-        (NQPauliState("Y", (1,)), NQPauliState("Z", (1,))),
-        (NQPauliState("Z", (1,)), NQPauliState("X", (1,))),
-        (NQPauliState("Z", (1,)), NQPauliState("Y", (1,))),
-        (NQPauliState("Z", (1,)), NQPauliState("Z", (1,))),
-        (NQPauliState("X", (-1,)), NQPauliState("X", (1,))),
-        (NQPauliState("X", (-1,)), NQPauliState("Y", (1,))),
-        (NQPauliState("X", (-1,)), NQPauliState("Z", (1,))),
-        (NQPauliState("Y", (-1,)), NQPauliState("X", (1,))),
-        (NQPauliState("Y", (-1,)), NQPauliState("Y", (1,))),
-        (NQPauliState("Y", (-1,)), NQPauliState("Z", (1,))),
-        (NQPauliState("Z", (-1,)), NQPauliState("X", (1,))),
-        (NQPauliState("Z", (-1,)), NQPauliState("Y", (1,))),
-        (NQPauliState("Z", (-1,)), NQPauliState("Z", (1,))),
-    ]
-    fid_pairs = huh
+# if n_qubits == 1:
+#     huh = [
+#         (NQPauliState("X", (1,)), NQPauliState("X", (1,))),
+#         (NQPauliState("X", (1,)), NQPauliState("Y", (1,))),
+#         (NQPauliState("X", (1,)), NQPauliState("Z", (1,))),
+#         (NQPauliState("Y", (1,)), NQPauliState("X", (1,))),
+#         (NQPauliState("Y", (1,)), NQPauliState("Y", (1,))),
+#         (NQPauliState("Y", (1,)), NQPauliState("Z", (1,))),
+#         (NQPauliState("Z", (1,)), NQPauliState("X", (1,))),
+#         (NQPauliState("Z", (1,)), NQPauliState("Y", (1,))),
+#         (NQPauliState("Z", (1,)), NQPauliState("Z", (1,))),
+#         (NQPauliState("X", (-1,)), NQPauliState("X", (1,))),
+#         (NQPauliState("X", (-1,)), NQPauliState("Y", (1,))),
+#         (NQPauliState("X", (-1,)), NQPauliState("Z", (1,))),
+#         (NQPauliState("Y", (-1,)), NQPauliState("X", (1,))),
+#         (NQPauliState("Y", (-1,)), NQPauliState("Y", (1,))),
+#         (NQPauliState("Y", (-1,)), NQPauliState("Z", (1,))),
+#         (NQPauliState("Z", (-1,)), NQPauliState("X", (1,))),
+#         (NQPauliState("Z", (-1,)), NQPauliState("Y", (1,))),
+#         (NQPauliState("Z", (-1,)), NQPauliState("Z", (1,))),
+#     ]
+#     fid_pairs = huh
 
 gates = ["Gi", "Gx", "Gy", "Gcnot"]
 max_lengths = [1, 2]
@@ -134,7 +134,7 @@ else:
 
 err_str = "HX"
 if n_qubits == 2:
-    term_dict = {("H", "IX"): 0.001}
+    term_dict = {("H", "XX"): 0.001}
 elif n_qubits == 3:
     term_dict = {("H", "XXI"): 0.001}
 else:
