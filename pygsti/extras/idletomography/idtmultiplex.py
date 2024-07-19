@@ -149,140 +149,149 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
     elif error_gen_type == "s":
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
+        stim_meas = str(meas_string).strip("+-")
         prep_string_iterator_extended = stim.PauliString.iter_all(
             num_qubits=num_qubits, allowed_paulis=stim_prep
         )
 
         prep_string_iterator = [pstring for pstring in prep_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(prep_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(prep_string.pauli_indices("Z")))]
-
-        t = 0
-        logger.info(f"Testing for: S[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
-        for string in prep_string_iterator:
-            logger.info(f"Substring = {string}")
-            used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
-            pauli_used_indices = [i for i,ltr in enumerate(str(pauli_index)[1:]) if ltr != "_"]
-            if len(used_indices) == 0 or used_indices != pauli_used_indices:
+        meas_string_iterator_extended =stim.PauliString.iter_all(
+            num_qubits=num_qubits, allowed_paulis=stim_meas
+        )
+        meas_string_iterator = [pstring for pstring in meas_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(meas_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(meas_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(meas_string.pauli_indices("Z")))]
+        for mstring in meas_string_iterator:
+            used_indices = [i for i,ltr in enumerate(str(mstring)[1:]) if ltr != "_"]
+            if len(used_indices) == 0:
                 continue
-            string = stim.PauliString(''.join(str(string)[1:][i] for i in used_indices))
+            t = 0
+            # logger.info(f"Testing for: S[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
+            for string in prep_string_iterator:
+                # logger.info(f"Substring = {string}")
+                used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
+                if len(used_indices) == 0:
+                    continue
+                ident = stim.PauliString(len(string))
 
-            new_pauli_index = stim.PauliString(''.join(str(pauli_index)[1:][i] for i in used_indices))
-            ident = stim.PauliString(len(string))
-            new_meas_string = stim.PauliString(''.join(str(meas_string)[1:][i] for i in used_indices))
-            error_gen = stochastic_error_generator(
-                string.to_unitary_matrix(endian="little"),
-                new_pauli_index.to_unitary_matrix(endian="little"),
-                ident.to_unitary_matrix(endian="little"),
-            )
-            # want approx non-zero rather than strict
-            if _np.any(error_gen):
-                # logger.info(f"Error Gen:\n{error_gen}")
-                error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / 2)
-                second_matrix = new_meas_string * error_gen_string
-                # what is the correct coefficient here?
-                logger.info(f"Current Trace: {t}")
-                # logger.info(f"Error Gen: \n{error_gen}")
-                # logger.info(f"Error Gen String: {error_gen_string}")
-                # logger.info(f"Second Matrix: {second_matrix}")
-                # logger.info(f"Second Matrix as unitary: \n{second_matrix.to_unitary_matrix(endian='little')}")
-                t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
-                logger.info(f"Updated Trace: {t}")
-                # print(t)
-        if _np.absolute(t) > 0.0001:
-            logger.info(f"Positive Match \n\nS[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Coef {t}\n")
-            return _np.real_if_close(t)
+                error_gen = stochastic_error_generator(
+                    string.to_unitary_matrix(endian="little"),
+                    pauli_index.to_unitary_matrix(endian="little"),
+                    ident.to_unitary_matrix(endian="little"),
+                )
+                if _np.any(error_gen):
+                    # logger.info(f"Error Gen:\n{error_gen}")
+                    error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / 2)
+                    second_matrix = mstring * error_gen_string
+                    # what is the correct coefficient here?
+                    # logger.info(f"Current Trace: {t}")
+                    # logger.info(f"Error Gen: \n{error_gen}")
+                    # logger.info(f"Error Gen String: {error_gen_string}")
+                    # logger.info(f"Second Matrix: {second_matrix}")
+                    # logger.info(f"Second Matrix as unitary: \n{second_matrix.to_unitary_matrix(endian='little')}")
+                    t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
+                    # logger.info(f"Updated Trace: {t}")
+                    # print(t)
+            if _np.absolute(t) > 0.0001:
+                logger.info(f"Positive Match \n\nS[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Observable {mstring} Coef {t}\n")
+                return _np.real_if_close(t)
     elif error_gen_type == "c":
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
-        logger.info(f"Testing for: C[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string})")
+        # logger.info(f"Testing for: C[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string})")
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
+        stim_meas = str(meas_string).strip("+-")
+
         prep_string_iterator_extended = stim.PauliString.iter_all(
             num_qubits=num_qubits, allowed_paulis=stim_prep
         )
 
         prep_string_iterator = [pstring for pstring in prep_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(prep_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(prep_string.pauli_indices("Z")))]
-        
-        t = 0
-        logger.info(f"Testing for: C[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
-        for string in prep_string_iterator:
-            logger.info(f"Substring = {string}")
-            used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
-            pauli_used_indices_1 = [i for i,ltr in enumerate(str(pauli_index_1)[1:]) if ltr != "_"]
-            pauli_used_indices_2 = [i for i,ltr in enumerate(str(pauli_index_2)[1:]) if ltr != "_"]
-            if len(used_indices) == 0 or (used_indices != pauli_used_indices_1 and used_indices != pauli_used_indices_2):
+        meas_string_iterator_extended =stim.PauliString.iter_all(
+            num_qubits=num_qubits, allowed_paulis=stim_meas
+        )
+        meas_string_iterator = [pstring for pstring in meas_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(meas_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(meas_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(meas_string.pauli_indices("Z")))]
+        for mstring in meas_string_iterator:
+            used_indices = [i for i,ltr in enumerate(str(mstring)[1:]) if ltr != "_"]
+            if len(used_indices) == 0:
                 continue
-            string = stim.PauliString(''.join(str(string)[1:][i] for i in used_indices))
+            t = 0
+            # logger.info(f"Testing for: C[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
+            for string in prep_string_iterator:
+                # logger.info(f"Substring = {string}")
+                used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
+                if len(used_indices) == 0:
+                    continue
 
-            new_pauli_index_1 = stim.PauliString(''.join(str(pauli_index_1)[1:][i] for i in used_indices))
-            new_pauli_index_2 = stim.PauliString(''.join(str(pauli_index_2)[1:][i] for i in used_indices))
-            new_meas_string = stim.PauliString(''.join(str(meas_string)[1:][i] for i in used_indices))
-            error_gen = pauli_correlation_error_generator(
-                string.to_unitary_matrix(endian="little"),
-                new_pauli_index_1.to_unitary_matrix(endian="little"),
-                new_pauli_index_2.to_unitary_matrix(endian="little"),
-            )
-            # want approx non-zero rather than strict
-            if _np.any(error_gen):
-                # logger.info(f"Error Gen:\n{error_gen}")
-                error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / _np.linalg.norm(error_gen,ord=_np.inf))
-                second_matrix = new_meas_string * error_gen_string
-                # what is the correct coefficient here?
-                # t += (1 / 2**num_qubits) * _np.trace(
-                t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
-                # print(t)
-        if _np.absolute(t) > 0.0001:
-            logger.info(f"Positive match \n\nC[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Coef {t}\n")
-            return _np.real_if_close(t)
+                error_gen = pauli_correlation_error_generator(
+                    string.to_unitary_matrix(endian="little"),
+                    pauli_index_1.to_unitary_matrix(endian="little"),
+                    pauli_index_2.to_unitary_matrix(endian="little"),
+                )
+                # want approx non-zero rather than strict
+                if _np.any(error_gen):
+                    # logger.info(f"Error Gen:\n{error_gen}")
+                    error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / _np.linalg.norm(error_gen,ord=_np.inf))
+                    second_matrix = mstring * error_gen_string
+                    # what is the correct coefficient here?
+                    # t += (1 / 2**num_qubits) * _np.trace(
+                    t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
+                    # print(t)
+            if _np.absolute(t) > 0.0001:
+                logger.info(f"Positive match \n\nC[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n")
+                return _np.real_if_close(t)
                 
     elif error_gen_type == "a":
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
-        logger.info(f"Testing for: A[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string})")
+        # logger.info(f"Testing for: A[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string})")
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
+        stim_meas = str(meas_string).strip("+-")
+
         prep_string_iterator_extended = stim.PauliString.iter_all(
             num_qubits=num_qubits, allowed_paulis=stim_prep
         )
 
         prep_string_iterator = [pstring for pstring in prep_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(prep_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(prep_string.pauli_indices("Z")))]
-        
-        t = 0
-        logger.info(f"Testing for: A[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
-        for string in prep_string_iterator:
-            logger.info(f"Substring = {string}")
-            used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
-            pauli_used_indices_1 = [i for i,ltr in enumerate(str(pauli_index_1)[1:]) if ltr != "_"]
-            pauli_used_indices_2 = [i for i,ltr in enumerate(str(pauli_index_2)[1:]) if ltr != "_"]
-            if len(used_indices) == 0 or (used_indices != pauli_used_indices_1 and used_indices != pauli_used_indices_2):
+        meas_string_iterator_extended =stim.PauliString.iter_all(
+            num_qubits=num_qubits, allowed_paulis=stim_meas
+        )
+        meas_string_iterator = [pstring for pstring in meas_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(meas_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(meas_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(meas_string.pauli_indices("Z")))]
+        for mstring in meas_string_iterator:
+            used_indices = [i for i,ltr in enumerate(str(mstring)[1:]) if ltr != "_"]
+            if len(used_indices) == 0:
                 continue
-            string = stim.PauliString(''.join(str(string)[1:][i] for i in used_indices))
+            t = 0
+            # logger.info(f"Testing for: A[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
+            for string in prep_string_iterator:
+                # logger.info(f"Substring = {string}")
+                used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
 
-            new_pauli_index_1 = stim.PauliString(''.join(str(pauli_index_1)[1:][i] for i in used_indices))
-            new_pauli_index_2 = stim.PauliString(''.join(str(pauli_index_2)[1:][i] for i in used_indices))
-            new_meas_string = stim.PauliString(''.join(str(meas_string)[1:][i] for i in used_indices))
-            error_gen = anti_symmetric_error_generator(
-                string.to_unitary_matrix(endian="little"),
-                new_pauli_index_1.to_unitary_matrix(endian="little"),
-                new_pauli_index_2.to_unitary_matrix(endian="little"),
-            )
-            # want approx non-zero rather than strict
-            if _np.any(error_gen):
-                logger.info(f"Error Gen:\n{error_gen}")
-                error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / _np.linalg.norm(error_gen,ord=_np.inf))
-                second_matrix = new_meas_string * error_gen_string
-                # what is the correct coefficient here?
-                # t += (1 / 2**num_qubits) * _np.trace(
-                t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
-                # print(t)
-        if _np.absolute(t) > 0.0001:
-            logger.info(f"Positive Match\n\nA[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Coef {t}\n")
-            return _np.real_if_close(t)
+                if len(used_indices) == 0:
+                    continue
+                error_gen = anti_symmetric_error_generator(
+                    string.to_unitary_matrix(endian="little"),
+                    pauli_index_1.to_unitary_matrix(endian="little"),
+                    pauli_index_2.to_unitary_matrix(endian="little"),
+                )
+                # want approx non-zero rather than strict
+                if _np.any(error_gen):
+                    # logger.info(f"Error Gen:\n{error_gen}")
+                    error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / _np.linalg.norm(error_gen,ord=_np.inf))
+                    second_matrix = mstring * error_gen_string
+                    # what is the correct coefficient here?
+                    # t += (1 / 2**num_qubits) * _np.trace(
+                    t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
+                    # print(t)
+            if _np.absolute(t) > 0.0001:
+                logger.info(f"Positive Match\n\nA[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n")
+                return _np.real_if_close(t)
     return False
 
 
 
 
-num_qubits = 2
+num_qubits = 3
 max_weight = 2
 
 HS_index_iterator = stim.PauliString.iter_all(
@@ -314,9 +323,7 @@ for i, j in prep_meas_pairs:
 
 #error_gen_classes = "h"
 hs_error_gen_classes = "hs"
-hs_error_gen_classes="h"
 ca_error_gen_classes = "ca"
-ca_error_gen_classes = ""
 
 for j in hs_error_gen_classes:
     for i in range(len(pauli_node_attributes)):
