@@ -55,21 +55,21 @@ def pauli_correlation_error_generator(
     pauli_index_1,
     pauli_index_2,
 ):
-    return 2 * (
+    return 1 * (
         pauli_index_1 @ initial_state @ pauli_index_2
         + pauli_index_2 @ initial_state @ pauli_index_1
-        - 0.5 * commute(commute(pauli_index_1, pauli_index_2), initial_state)
+        - 0.5 * anti_commute(anti_commute(pauli_index_1, pauli_index_2), initial_state)
     )
 
 
 # Anti-symmetric Error Generator
 def anti_symmetric_error_generator(initial_state, pauli_index_1, pauli_index_2):
-    return 2j * (
+    return 1j * (
         pauli_index_1 @ initial_state @ pauli_index_2
         - pauli_index_2 @ initial_state @ pauli_index_1
         + 0.5
-        * commute(
-            anti_commute(pauli_index_1, pauli_index_2),
+        * anti_commute(
+            commute(pauli_index_1, pauli_index_2),
             initial_state,
         )
     )
@@ -212,15 +212,15 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
         meas_string_iterator = [pstring for pstring in meas_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(meas_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(meas_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(meas_string.pauli_indices("Z")))]
         for mstring in meas_string_iterator:
             used_indices = [i for i,ltr in enumerate(str(mstring)[1:]) if ltr != "_"]
-            if len(used_indices) == 0:
-                continue
+            # if len(used_indices) == 0:
+            #     continue
             t = 0
-            # logger.info(f"Testing for: C[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
+            logger.info(f"Testing for: C[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Measurable {mstring}")
             for string in prep_string_iterator:
-                # logger.info(f"Substring = {string}")
+                logger.info(f"Substring = {string}")
                 used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
-                if len(used_indices) == 0:
-                    continue
+                # if len(used_indices) == 0:
+                #     continue
 
                 error_gen = pauli_correlation_error_generator(
                     string.to_unitary_matrix(endian="little"),
@@ -232,13 +232,14 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                     # logger.info(f"Error Gen:\n{error_gen}")
                     error_gen_string = stim.PauliString.from_unitary_matrix(error_gen / _np.linalg.norm(error_gen,ord=_np.inf))
                     second_matrix = mstring * error_gen_string
+                    logger.info(f"thing we're taking the trace of: {second_matrix}")
                     # what is the correct coefficient here?
                     # t += (1 / 2**num_qubits) * _np.trace(
                     t += (1 / 2**(len(string)-1))*_np.trace(second_matrix.to_unitary_matrix(endian="little"))
-                    # print(t)
+                    logger.info(f"updated coef: {_np.real_if_close(t)}")
             if _np.absolute(t) > 0.0001:
                 logger.info(f"Positive match \n\nC[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n")
-                return _np.real_if_close(t)
+                # return _np.real_if_close(t)
                 
     elif error_gen_type == "a":
         pauli_index_1 = pauli_index[0]
@@ -259,16 +260,16 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
         meas_string_iterator = [pstring for pstring in meas_string_iterator_extended if (set(pstring.pauli_indices("X")).issubset(meas_string.pauli_indices("X")) and set(pstring.pauli_indices("Y")).issubset(meas_string.pauli_indices("Y")) and set(pstring.pauli_indices("Z")).issubset(meas_string.pauli_indices("Z")))]
         for mstring in meas_string_iterator:
             used_indices = [i for i,ltr in enumerate(str(mstring)[1:]) if ltr != "_"]
-            if len(used_indices) == 0:
-                continue
+            # if len(used_indices) == 0:
+            #     continue
             t = 0
             # logger.info(f"Testing for: A[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
             for string in prep_string_iterator:
                 # logger.info(f"Substring = {string}")
                 used_indices = [i for i,ltr in enumerate(str(string)[1:]) if ltr != "_"]
 
-                if len(used_indices) == 0:
-                    continue
+                # if len(used_indices) == 0:
+                #     continue
                 error_gen = anti_symmetric_error_generator(
                     string.to_unitary_matrix(endian="little"),
                     pauli_index_1.to_unitary_matrix(endian="little"),
@@ -285,13 +286,13 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                     # print(t)
             if _np.absolute(t) > 0.0001:
                 logger.info(f"Positive Match\n\nA[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n")
-                return _np.real_if_close(t)
-    return False
+                # return _np.real_if_close(t)
 
 
 
 
-num_qubits = 3
+
+num_qubits = 2
 max_weight = 2
 
 HS_index_iterator = stim.PauliString.iter_all(
@@ -302,6 +303,20 @@ pauli_node_attributes = list([p for p in HS_index_iterator])
 # this one is currently generating too many combinations
 # unrelated to this, corre
 ca_pauli_node_attributes = list(_itertools.combinations(pauli_node_attributes,2))
+
+def ca_pauli_weight_filter(pauli_pair, max_weight):
+    used_indices_1 = set(i for i,ltr in enumerate(str(pauli_pair[0])[1:]) if ltr != "_")
+    used_indices_2 = set(i for i,ltr in enumerate(str(pauli_pair[1])[1:]) if ltr != "_")
+    overlap = used_indices_1.symmetric_difference(used_indices_2)
+    intersect = used_indices_1.intersection(used_indices_2)
+    if len(intersect) > 0 and len(intersect) <= max_weight:
+        return True
+    
+ca_pauli_node_attributes = [ppair for ppair in ca_pauli_node_attributes if ca_pauli_weight_filter(ppair, max_weight)]
+
+
+# print(ca_pauli_node_attributes)
+# quit()
 
 measure_string_iterator = stim.PauliString.iter_all(num_qubits, min_weight=num_qubits)
 measure_string_attributes = list([p for p in measure_string_iterator])
