@@ -24,11 +24,11 @@ logging.basicConfig(filename="two_qubit_log.log", encoding="utf-8", level=loggin
 
 # Commutator Helper Functions
 def commute(mat1, mat2):
-    return mat1 @ mat2 + mat2 @ mat1
+    return mat1 @ mat2 - mat2 @ mat1
 
 
 def anti_commute(mat1, mat2):
-    return mat1 @ mat2 - mat2 @ mat1
+    return mat1 @ mat2 + mat2 @ mat1
 
 
 # Hamiltonian Error Generator
