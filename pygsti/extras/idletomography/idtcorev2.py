@@ -15,6 +15,7 @@ from pygsti.baseobjs import basisconstructors
 import numpy as _np
 from pygsti.baseobjs import Basis
 import re
+from icecream import ic
 
 import logging
 
@@ -77,7 +78,7 @@ def anti_symmetric_error_generator(initial_state, pauli_index_1, pauli_index_2):
     )
 
 
-def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_string):
+def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_string):
     if error_gen_type == "h":
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
@@ -112,15 +113,13 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                 and set(pstring.pauli_indices("Z")).issubset(
                     meas_string.pauli_indices("Z")
                 )
+                and pstring.weight != 0
             )
         ]
-
-        # logger.info(f"Testing for: H[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
+        h_coef_list = []
         for mstring in meas_string_iterator:
-            # logger.info(f"Evaluating for observable {mstring}")
             t = 0
             for string in prep_string_iterator:
-                # logger.info(f"Substring = {string}")
                 ident = stim.PauliString(len(string))
                 error_gen = hamiltonian_error_generator(
                     string.to_unitary_matrix(endian="little"),
@@ -133,18 +132,17 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                         error_gen / norm
                     )
                     second_matrix = mstring * error_gen_string
-                    # logger.info(f"Current Trace: {t}")
                     t += (
                         norm
                         * (1 / 2 ** (len(string)))
                         * _np.trace(second_matrix.to_unitary_matrix(endian="little"))
                     )
-                    # logger.info(f"Updated Trace: {t}")
             if _np.absolute(t) > 0.0001:
                 logger.info(
                     f"Positive Match \n\nH[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Measureable {mstring}; Coef {t}\n"
                 )
-                return [
+            h_coef_list.append(
+                [
                     "H",
                     pauli_index,
                     prep_string,
@@ -152,7 +150,8 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                     mstring,
                     _np.real_if_close(t),
                 ]
-
+            )
+        return h_coef_list
     elif error_gen_type == "s":
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
@@ -192,9 +191,7 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
         ]
         for mstring in meas_string_iterator:
             t = 0
-            # logger.info(f"Testing for: S[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
             for string in prep_string_iterator:
-                # logger.info(f"Substring = {string}")
                 ident = stim.PauliString(len(string))
 
                 error_gen = stochastic_error_generator(
@@ -203,23 +200,16 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                     ident.to_unitary_matrix(endian="little"),
                 )
                 if _np.any(error_gen):
-                    # logger.info(f"Error Gen:\n{error_gen}")
                     norm = _np.linalg.norm(error_gen, ord=_np.inf)
                     error_gen_string = stim.PauliString.from_unitary_matrix(
                         error_gen / norm
                     )
                     second_matrix = mstring * error_gen_string
-                    # logger.info(f"Current Trace: {t}")
-                    # logger.info(f"Error Gen: \n{error_gen}")
-                    # logger.info(f"Error Gen String: {error_gen_string}")
-                    # logger.info(f"Second Matrix: {second_matrix}")
-                    # logger.info(f"Second Matrix as unitary: \n{second_matrix.to_unitary_matrix(endian='little')}")
                     t += (
                         norm
                         * (1 / 2 ** (len(string)))
                         * _np.trace(second_matrix.to_unitary_matrix(endian="little"))
                     )
-                    # logger.info(f"Updated Trace: {t}")
             if _np.absolute(t) > 0.0001:
                 logger.info(
                     f"Positive Match \n\nS[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Observable {mstring} Coef {t}\n"
@@ -235,7 +225,6 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
     elif error_gen_type == "c":
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
-        # logger.info(f"Testing for: C[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string})")
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
@@ -275,11 +264,7 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
         ]
         for mstring in meas_string_iterator:
             t = 0
-            # logger.info(
-            #     f"Testing for: C[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Measurable {mstring}"
-            # )
             for string in prep_string_iterator:
-                # logger.info(f"Substring = {string}")
                 error_gen = pauli_correlation_error_generator(
                     string.to_unitary_matrix(endian="little"),
                     pauli_index_1.to_unitary_matrix(endian="little"),
@@ -287,21 +272,16 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                 )
 
                 if _np.any(error_gen):
-                    # logger.info(f"Error Gen:\n{error_gen}")
                     norm = _np.linalg.norm(error_gen, ord=_np.inf)
                     error_gen_string = stim.PauliString.from_unitary_matrix(
                         error_gen / _np.linalg.norm(error_gen, ord=_np.inf)
                     )
                     second_matrix = mstring * error_gen_string
-                    # logger.info(
-                    #     f"thing we're taking the trace of: {second_matrix.to_unitary_matrix(endian='little')}"
-                    # )
                     t += (
                         norm
                         * (1 / 2 ** (len(string)))
                         * _np.trace(second_matrix.to_unitary_matrix(endian="little"))
                     )
-                    # logger.info(f"updated coef: {_np.real_if_close(t)}")
             if _np.absolute(t) > 0.0001:
                 logger.info(
                     f"Positive match \n\nC[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n"
@@ -319,7 +299,6 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
     elif error_gen_type == "a":
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
-        # logger.info(f"Testing for: A[{pauli_index_1,pauli_index_2}]; Experiment ({prep_string}/{meas_string})")
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
@@ -359,17 +338,13 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
         ]
         for mstring in meas_string_iterator:
             t = 0
-            # logger.info(f"Testing for: A[{pauli_index}]; Experiment ({prep_string}/{meas_string})")
             for string in prep_string_iterator:
-                # logger.info(f"Substring = {string}")
                 error_gen = anti_symmetric_error_generator(
                     string.to_unitary_matrix(endian="little"),
                     pauli_index_1.to_unitary_matrix(endian="little"),
                     pauli_index_2.to_unitary_matrix(endian="little"),
                 )
-                # want approx non-zero rather than strict
                 if _np.any(error_gen):
-                    # logger.info(f"Error Gen:\n{error_gen}")
                     norm = _np.linalg.norm(error_gen, ord=_np.inf)
                     error_gen_string = stim.PauliString.from_unitary_matrix(
                         error_gen / _np.linalg.norm(error_gen, ord=_np.inf)
@@ -380,7 +355,6 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                         * (1 / 2 ** (len(string)))
                         * _np.trace(second_matrix.to_unitary_matrix(endian="little"))
                     )
-                    # print(t)
             if _np.absolute(t) > 0.0001:
                 logger.info(
                     f"Positive Match\n\nA[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n"
@@ -396,266 +370,67 @@ def alt_coverage_edge_exists(error_gen_type, pauli_index, prep_string, meas_stri
                 ]
 
 
-num_qubits = 2
-max_weight = 2
+if __name__ == "__main__":
+    num_qubits = 1
+    max_weight = 1
 
-HS_index_iterator = stim.PauliString.iter_all(
-    num_qubits, min_weight=1, max_weight=max_weight
-)
-
-pauli_node_attributes = list([p for p in HS_index_iterator])
-ca_pauli_node_attributes = list(_itertools.combinations(pauli_node_attributes, 2))
-
-
-def ca_pauli_weight_filter(pauli_pair, max_weight):
-    used_indices_1 = set(
-        i for i, ltr in enumerate(str(pauli_pair[0])[1:]) if ltr != "_"
-    )
-    used_indices_2 = set(
-        i for i, ltr in enumerate(str(pauli_pair[1])[1:]) if ltr != "_"
-    )
-    intersect = used_indices_1.intersection(used_indices_2)
-    if len(intersect) > 0 and len(intersect) <= max_weight:
-        return True
-
-
-ca_pauli_node_attributes = [
-    ppair
-    for ppair in ca_pauli_node_attributes
-    if ca_pauli_weight_filter(ppair, max_weight)
-]
-
-
-# print(ca_pauli_node_attributes)
-# quit()
-
-measure_string_iterator = stim.PauliString.iter_all(num_qubits, min_weight=num_qubits)
-measure_string_attributes = list([p for p in measure_string_iterator])
-prep_string_attributes = measure_string_attributes
-prep_meas_pairs = list(product(prep_string_attributes, measure_string_attributes))
-
-
-# print(prep_meas_pairs)
-
-ident = stim.PauliString(num_qubits)
-
-
-test_graph = nx.Graph()
-# test_graph.add_nodes_from(enumerate(pauli_node_attributes), pauli_string = pauli_node_attributes, bipartite=1)
-for i, j in prep_meas_pairs:
-    test_graph.add_node(
-        len(test_graph.nodes) + 1, prep_string=i, meas_string=j, bipartite=0
+    HS_index_iterator = stim.PauliString.iter_all(
+        num_qubits, min_weight=1, max_weight=max_weight
     )
 
-# error_gen_classes = "h"
-hs_error_gen_classes = "hs"
-ca_error_gen_classes = "ca"
+    pauli_node_attributes = list([p for p in HS_index_iterator])
+    ca_pauli_node_attributes = list(_itertools.combinations(pauli_node_attributes, 2))
 
-for j in hs_error_gen_classes:
-    for i in range(len(pauli_node_attributes)):
-        test_graph.add_node(
-            len(test_graph.nodes) + 1,
-            error_gen_class=j,
-            pauli_index=pauli_node_attributes[i],
-            bipartite=1,
+    def ca_pauli_weight_filter(pauli_pair, max_weight):
+        used_indices_1 = set(
+            i for i, ltr in enumerate(str(pauli_pair[0])[1:]) if ltr != "_"
         )
-
-for j in ca_error_gen_classes:
-    for i in range(len(ca_pauli_node_attributes)):
-        test_graph.add_node(
-            len(test_graph.nodes) + 1,
-            error_gen_class=j,
-            pauli_index=ca_pauli_node_attributes[i],
-            bipartite=1,
+        used_indices_2 = set(
+            i for i, ltr in enumerate(str(pauli_pair[1])[1:]) if ltr != "_"
         )
+        intersect = used_indices_1.intersection(used_indices_2)
+        if len(intersect) > 0 and len(intersect) <= max_weight:
+            return True
 
-# print(test_graph.nodes[88])
-# print([test_graph.nodes[node] for node in test_graph.nodes])
-# quit()
-bipartite_identifier = nx.get_node_attributes(test_graph, "bipartite")
-# hey rewrite this to not be stupid.  or at least less stupid.
-bipartite_pairs = [
-    (k1, k2)
-    for k1 in bipartite_identifier.keys()
-    if bipartite_identifier[k1] == 0
-    for k2 in bipartite_identifier.keys()
-    if bipartite_identifier[k2] == 1
-]
+    ca_pauli_node_attributes = [
+        ppair
+        for ppair in ca_pauli_node_attributes
+        if ca_pauli_weight_filter(ppair, max_weight)
+    ]
 
-for pair in bipartite_pairs:
-    n = alt_coverage_edge_exists(
-        test_graph.nodes[pair[1]]["error_gen_class"],
-        test_graph.nodes[pair[1]]["pauli_index"],
-        test_graph.nodes[pair[0]]["prep_string"],
-        test_graph.nodes[pair[0]]["meas_string"],
+    measure_string_iterator = stim.PauliString.iter_all(
+        num_qubits, min_weight=num_qubits
     )
-    if n:
-        test_graph.add_edge(pair[0], pair[1], coef=n)
+    measure_string_attributes = list([p for p in measure_string_iterator])
 
+    hs_error_gen_classes = "h"
+    ca_error_gen_classes = ""
 
-# print(list(test_graph.nodes[n] for n in test_graph.nodes))
-# print(list(edge for edge in test_graph.edges if edge[1]==87))
-# quit()
-# print(test_graph.nodes[88])
-labels = {n: "" for n in test_graph.nodes}
-pos = {n: (0, 0) for n in test_graph.nodes}
-x_pos_err = 0
-x_pos_exp = 0
-# save_me = [2]
-for n in test_graph.nodes:
-    if test_graph.nodes[n].get("pauli_index"):
-        labels[n] = (
-            str(test_graph.nodes[n].get("error_gen_class"))
-            + "_"
-            + str(test_graph.nodes[n].get("pauli_index"))
+    hs_experiment = list(
+        product(
+            hs_error_gen_classes,
+            pauli_node_attributes,
+            measure_string_attributes,
+            measure_string_attributes,
         )
-        pos[n] = (x_pos_err, 1)
-        x_pos_err += 7000
-    #         save_me.append(n)
-    else:
-        labels[n] = (
-            str(test_graph.nodes[n]["prep_string"])
-            + " / "
-            + str(test_graph.nodes[n]["meas_string"])
+    )
+    ca_experiment = list(
+        product(
+            ca_error_gen_classes,
+            ca_pauli_node_attributes,
+            measure_string_attributes,
+            measure_string_attributes,
         )
-        pos[n] = (x_pos_exp, 0)
-        x_pos_exp += 1000
-
-# hxy_subgraph = nx.subgraph(test_graph, save_me)
-
-
-# x_pos_err = 0
-# x_pos_exp = 0
-# for n in hxy_subgraph.nodes:
-#     if test_graph.nodes[n].get("pauli_index"):
-#         labels[n] = str(test_graph.nodes[n].get("error_gen_class")) + "_" + str(test_graph.nodes[n].get("pauli_index"))
-#         pos[n] = (x_pos_err, 3)
-#         x_pos_err += 2
-#     else:
-#         labels[n] = str(test_graph.nodes[n]["prep_string"]) + " / " + str(test_graph.nodes[n]["meas_string"])
-#         pos[n] = (x_pos_exp, 0)
-#         x_pos_exp += 2
-
-
-# nx.draw(test_graph, nx.kamada_kawai_layout(test_graph))
-# plt.figure(figsize=(11, 8.5))
-# nx.draw_networkx_nodes(test_graph, pos, node_size=15)
-# nx.draw_networkx_edges(test_graph, pos)
-# nx.draw_networkx_labels(test_graph, pos, labels=labels, font_size=2)
-# plt.savefig("dum_graf.pdf")
-# quit()
-
-with open("two_qubit_weight_one_test.txt", "w") as f:
-    for k, v, d in test_graph.edges.data():
-        f.write("\n")
-        f.write(
-            "Experiment "
-            + str(test_graph.nodes[k]["prep_string"])
-            + " / "
-            + str(test_graph.nodes[k]["meas_string"])
-            + " is sensitive to the error generator "
-            + str(test_graph.nodes[v].get("error_gen_class")).capitalize()
-            + "["
-            + str(test_graph.nodes[v].get("pauli_index"))[1:]
-            + "] with coefficient "
-            + str(d["coef"])
-        )
-        f.write("\n")
-
-quit()
-
-
-m = pe.ConcreteModel()
-m.covering_nodes = [
-    n for n in test_graph.nodes if test_graph.nodes[n]["bipartite"] == 0
-]
-m.error_generator_nodes = [
-    n for n in test_graph.nodes if test_graph.nodes[n]["bipartite"] == 1
-]
-m.edges = test_graph.edges
-m.num_qubits = num_qubits
-# print(m.edges)
-m.experiment_choice = pe.Var(m.covering_nodes, domain=pe.Binary, initialize=0)
-m.known_error_generators = pe.Var(
-    m.error_generator_nodes, domain=pe.Binary, initialize=0
-)
-m.information_streams = pe.Var(m.edges, domain=pe.Binary, initialize=0)
-
-# @m.Constraint(m.error_generator_nodes)
-# def covering_logic_rule(m,covered_node):
-#     return sum(m.experiment_choice[covering_node] for (covering_node,cov_node) in m.edges if cov_node==covered_node) >= m.known_error_generators[covered_node]
-
-# @m.Constraint(m.error_generator_nodes)
-# def full_knowledge_rule(m, covered_node):
-#     return sum(m.experiment_choice[covering_node] for (covering_node,cov_node) in m.edges if cov_node == covered_node) >= nx.degree(test_graph, covered_node)
-
-
-@m.Constraint(m.edges)
-def error_gen_covering_rule(m, *edge):
-    return m.known_error_generators[edge[1]] >= m.information_streams[edge]
-
-
-@m.Constraint(m.edges)
-def experiment_covering_rule(m, *edge):
-    return m.experiment_choice[edge[0]] >= m.information_streams[edge]
-
-
-@m.Constraint(m.error_generator_nodes)
-def error_gen_selection_rule(m, node):
-    return m.known_error_generators[node] <= sum(
-        m.information_streams[edge] for edge in m.edges if edge[1] == node
     )
 
+    jacobian_coefficient_dict = {}
 
-@m.Constraint(m.covering_nodes)
-def experiment_selection_rule(m, node):
-    return m.experiment_choice[node] <= sum(
-        m.information_streams[edge] for edge in m.edges if edge[0] == node
-    )
+    # These come back as class, index, prep_str, meas_str, observ_str: coef
+    for key in hs_experiment + ca_experiment:
+        elt = jacobian_coefficient_calc(*key)
+        ic(elt)
+        for el in elt:
+            if el:
+                jacobian_coefficient_dict[tuple(str(e) for e in el[:-1])] = int(el[-1])
 
-
-@m.Constraint(m.covering_nodes)
-def saturation_rule(m, covering_node):
-    if nx.degree(test_graph, covering_node) == 0:
-        return pe.Constraint.Skip
-    return (
-        sum(m.information_streams[edge] for edge in m.edges if edge[0] == covering_node)
-        <= 2**m.num_qubits - 1
-    )
-
-
-@m.Constraint(m.error_generator_nodes)
-def full_coverage(m, covered_node):
-    return m.known_error_generators[covered_node] >= 1
-
-
-m.obj = pe.Objective(expr=sum(m.experiment_choice[n] for n in m.covering_nodes))
-with open("hahahahano.txt", "w") as f:
-    m.pprint(f)
-opt = pe.SolverFactory("gurobi")
-opt.solve(m, tee=True)
-# m.pprint()
-print(f"{pe.value(m.obj)}")
-import re
-
-info_streams = []
-exp_egen_pairs = []
-for v in m.component_data_objects(ctype=pe.Var):
-    if "exp" in v.name and pe.value(v) >= 0.001:
-        print(v.name, pe.value(v))
-    if "inf" in v.name and pe.value(v) >= 0.001:
-        print(v.name)
-        nums = re.findall(r"\d+", v.name)
-        info_streams.append((int(nums[0]), int(nums[1])))
-
-for info_stream in info_streams:
-    egen_class = (
-        test_graph.nodes[info_stream[1]]["error_gen_class"]
-        + str(test_graph.nodes[info_stream[1]]["pauli_index"])[1:]
-    )
-    prep_string = test_graph.nodes[info_stream[0]]["prep_string"]
-    meas_string = test_graph.nodes[info_stream[0]]["meas_string"]
-    exp_egen_pairs.append(((prep_string, meas_string), egen_class))
-
-for pair in exp_egen_pairs:
-    print("(" + str(pair[0][0])[1:] + "," + str(pair[0][1])[1:] + ") -----> " + pair[1])
+ic(jacobian_coefficient_dict)
