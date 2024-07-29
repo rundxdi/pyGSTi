@@ -79,6 +79,7 @@ def anti_symmetric_error_generator(initial_state, pauli_index_1, pauli_index_2):
 
 
 def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_string):
+    coef_list = []
     if error_gen_type == "h":
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
@@ -116,7 +117,6 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 and pstring.weight != 0
             )
         ]
-        h_coef_list = []
         for mstring in meas_string_iterator:
             t = 0
             for string in prep_string_iterator:
@@ -141,7 +141,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive Match \n\nH[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Measureable {mstring}; Coef {t}\n"
                 )
-            h_coef_list.append(
+            coef_list.append(
                 [
                     "H",
                     pauli_index,
@@ -151,7 +151,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                     _np.real_if_close(t),
                 ]
             )
-        return h_coef_list
+        
     elif error_gen_type == "s":
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
@@ -187,6 +187,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 and set(pstring.pauli_indices("Z")).issubset(
                     meas_string.pauli_indices("Z")
                 )
+                and pstring.weight != 0
             )
         ]
         for mstring in meas_string_iterator:
@@ -214,14 +215,14 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive Match \n\nS[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Observable {mstring} Coef {t}\n"
                 )
-                return [
-                    "S",
-                    pauli_index,
-                    prep_string,
-                    meas_string,
-                    mstring,
-                    _np.real_if_close(t),
-                ]
+            coef_list.append([
+                "S",
+                pauli_index,
+                prep_string,
+                meas_string,
+                mstring,
+                _np.real_if_close(t),
+            ])
     elif error_gen_type == "c":
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
@@ -260,6 +261,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 and set(pstring.pauli_indices("Z")).issubset(
                     meas_string.pauli_indices("Z")
                 )
+                and pstring.weight != 0
             )
         ]
         for mstring in meas_string_iterator:
@@ -286,15 +288,15 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive match \n\nC[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n"
                 )
-                return [
-                    "C",
-                    pauli_index_1,
-                    pauli_index_2,
-                    prep_string,
-                    meas_string,
-                    mstring,
-                    _np.real_if_close(t),
-                ]
+            coef_list.append([
+                "C",
+                pauli_index_1,
+                pauli_index_2,
+                prep_string,
+                meas_string,
+                mstring,
+                _np.real_if_close(t),
+            ])
 
     elif error_gen_type == "a":
         pauli_index_1 = pauli_index[0]
@@ -334,6 +336,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 and set(pstring.pauli_indices("Z")).issubset(
                     meas_string.pauli_indices("Z")
                 )
+                and pstring.weight != 0
             )
         ]
         for mstring in meas_string_iterator:
@@ -359,15 +362,16 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive Match\n\nA[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n"
                 )
-                return [
-                    "A",
-                    pauli_index_1,
-                    pauli_index_2,
-                    prep_string,
-                    meas_string,
-                    mstring,
-                    _np.real_if_close(t),
-                ]
+            coef_list.append([
+                "A",
+                pauli_index_1,
+                pauli_index_2,
+                prep_string,
+                meas_string,
+                mstring,
+                _np.real_if_close(t),
+            ])
+    return coef_list
 
 
 if __name__ == "__main__":
@@ -403,8 +407,56 @@ if __name__ == "__main__":
     )
     measure_string_attributes = list([p for p in measure_string_iterator])
 
-    hs_error_gen_classes = "h"
-    ca_error_gen_classes = ""
+    hs_error_gen_classes = "hs"
+    ca_error_gen_classes = "ca"
+
+
+    hs_experiment = list(
+        product(
+            hs_error_gen_classes,
+            pauli_node_attributes,
+            measure_string_attributes,
+            measure_string_attributes,
+        )
+    )
+    ca_experiment = list(
+        product(
+            ca_error_gen_classes,
+            ca_pauli_node_attributes,
+            measure_string_attributes,
+            measure_string_attributes,
+        )
+    )
+
+
+
+    import pandas as pd
+
+    df = pd.DataFrame()
+    
+
+    # These come back as class, index, prep_str, meas_str, observ_str: coef
+    for key in hs_experiment + ca_experiment:
+        elt = jacobian_coefficient_calc(*key)
+        for el in elt:
+            if el:
+                observable = ",".join(str(s)[1:] for s in el[-4:-1])
+                egen = ",".join(str(s) for s in el[:-4])
+                coef = int(el[-1])
+                df.at[observable, egen] = coef
+    #df.at causes fragmentation errors to be spammed
+
+    whatever = df.to_numpy()
+    inv = _np.linalg.pinv(whatever)
+    ic(whatever)
+    ic(inv)
+
+
+
+
+
+
+    quit()
 
     hs_experiment = list(
         product(
@@ -428,9 +480,12 @@ if __name__ == "__main__":
     # These come back as class, index, prep_str, meas_str, observ_str: coef
     for key in hs_experiment + ca_experiment:
         elt = jacobian_coefficient_calc(*key)
-        ic(elt)
+        # ic(elt)
         for el in elt:
+            # ic(el)
             if el:
                 jacobian_coefficient_dict[tuple(str(e) for e in el[:-1])] = int(el[-1])
+                # ic(jacobian_coefficient_dict)
 
-ic(jacobian_coefficient_dict)
+    for k,v in jacobian_coefficient_dict.items():
+        ic(k,v)
