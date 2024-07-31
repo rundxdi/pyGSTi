@@ -1,24 +1,24 @@
-#***************************************************************************************************
+# ***************************************************************************************************
 # Copyright 2015, 2019 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 # Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains certain rights
 # in this software.
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 # in compliance with the License.  You may obtain a copy of the License at
 # http://www.apache.org/licenses/LICENSE-2.0 or in the LICENSE file in the root pyGSTi directory.
-#***************************************************************************************************
+# ***************************************************************************************************
 """ Pauli state/operation/outcome objects for Idle Tomography """
 
 import numpy as _np
 
-from ...circuits.circuit import Circuit as _Circuit
-from ...baseobjs.label import Label as _Lbl
+from pygsti.circuits.circuit import Circuit as _Circuit
+from pygsti.baseobjs.label import Label as _Lbl
 
 
-#Helper function
+# Helper function
 
 
 def _commute_parity(pauli1, pauli2):
-    """ 1 if pauli1 commutes w/pauli2, -1 if they anticommute """
+    """1 if pauli1 commutes w/pauli2, -1 if they anticommute"""
     return 1 if (pauli1 == "I" or pauli2 == "I" or pauli1 == pauli2) else -1
 
 
@@ -29,18 +29,18 @@ class NQOutcome(object):
 
     @classmethod
     def weight_1_string(cls, n, i):
-        """ creates a `n`-bit string with a 1 in location `i`. """
+        """creates a `n`-bit string with a 1 in location `i`."""
         ident = list("0" * n)
         ident[i] = "1"
-        return cls(''.join(ident))
+        return cls("".join(ident))
 
     @classmethod
     def weight_2_string(cls, n, i, j):
-        """ creates a `n`-bit string with 1s in locations `i` and `j`. """
+        """creates a `n`-bit string with 1s in locations `i` and `j`."""
         ident = list("0" * n)
         ident[i] = "1"
         ident[j] = "1"
-        return cls(''.join(ident))
+        return cls("".join(ident))
 
     def __init__(self, string_rep):
         """
@@ -78,9 +78,11 @@ class NQOutcome(object):
         """
         outcomes = [self.rep[i] for i in range(len(self.rep))]
         for i in indices:
-            if outcomes[i] == '0': outcomes[i] = '1'
-            elif outcomes[i] == '1': outcomes[i] = '0'
-        return NQOutcome(''.join(outcomes))
+            if outcomes[i] == "0":
+                outcomes[i] = "1"
+            elif outcomes[i] == "1":
+                outcomes[i] = "0"
+        return NQOutcome("".join(outcomes))
 
 
 class NQPauliState(object):
@@ -113,7 +115,7 @@ class NQPauliState(object):
             means the opposite: the "-" eigenvector is prepared and it
             corresponds to a "1" outcome.  The default is all +.
         """
-        assert("I" not in string_rep), "'I' cannot be in a NQPauliState"
+        assert "I" not in string_rep, "'I' cannot be in a NQPauliState"
         self.rep = string_rep
         if signs is None:
             signs = (1,) * len(self.rep)
@@ -123,9 +125,8 @@ class NQPauliState(object):
         return len(self.rep)
 
     def __str__(self):
-        sgn = {1: '+', -1: '-'}
-        return "".join(["%s%s" % (sgn[s], let)
-                        for s, let in zip(self.signs, self.rep)])
+        sgn = {1: "+", -1: "-"}
+        return "".join(["%s%s" % (sgn[s], let) for s, let in zip(self.signs, self.rep)])
 
     def __repr__(self):
         return "State[" + str(self) + "]"
@@ -158,15 +159,17 @@ class NQPauliState(object):
         Circuit
         """
         opstr = []
-        sgn = {1: '+', -1: '-'}
+        sgn = {1: "+", -1: "-"}
         nQubits = len(self.signs)
         for i, (s, let) in enumerate(zip(self.signs, self.rep)):
             key = sgn[s] + let  # e.g. "+X", "-Y", etc
             if key not in pauli_basis_dict and s == +1:
                 key = let  # try w/out "+"
             if key not in pauli_basis_dict:
-                raise ValueError("'%s' is not in `pauli_basis_dict` (keys = %s)"
-                                 % (key, str(list(pauli_basis_dict.keys()))))
+                raise ValueError(
+                    "'%s' is not in `pauli_basis_dict` (keys = %s)"
+                    % (key, str(list(pauli_basis_dict.keys())))
+                )
             opstr.extend([_Lbl(opname, i) for opname in pauli_basis_dict[key]])
             # pauli_basis_dict just has 1Q gate *names* -- need to make into labels
         return _Circuit(opstr, num_lines=nQubits).parallelize()
@@ -202,7 +205,7 @@ class NQPauliOp(object):
         """
         ident = list("I" * n)
         ident[i] = ["X", "Y", "Z"][pauli]
-        return cls(''.join(ident))
+        return cls("".join(ident))
 
     @classmethod
     def weight_2_pauli(cls, n, i, j, pauli1, pauli2):
@@ -234,7 +237,7 @@ class NQPauliOp(object):
         ident = list("I" * n)
         ident[i] = ["X", "Y", "Z"][pauli1]
         ident[j] = ["X", "Y", "Z"][pauli2]
-        return cls(''.join(ident))
+        return cls("".join(ident))
 
     def __init__(self, string_rep, sign=1):
         """
@@ -256,10 +259,10 @@ class NQPauliOp(object):
         return len(self.rep)
 
     def __str__(self):
-        return "%s%s" % ('-' if (self.sign == -1) else ' ', self.rep)
+        return "%s%s" % ("-" if (self.sign == -1) else " ", self.rep)
 
     def __repr__(self):
-        return "NQPauliOp[%s%s]" % ('-' if (self.sign == -1) else ' ', self.rep)
+        return "NQPauliOp[%s%s]" % ("-" if (self.sign == -1) else " ", self.rep)
 
     def __eq__(self, other):
         return (self.rep == other.rep) and (self.sign == other.sign)
@@ -285,7 +288,7 @@ class NQPauliOp(object):
         ident = list("I" * len(self.rep))
         for i in indices:
             ident[i] = self.rep[i]
-        return NQPauliOp(''.join(ident))
+        return NQPauliOp("".join(ident))
 
     def dot(self, other):
         """
@@ -302,7 +305,7 @@ class NQPauliOp(object):
         integer
             Either 0, 1, or -1.
         """
-        assert(len(self) == len(other)), "Length mismatch!"
+        assert len(self) == len(other), "Length mismatch!"
         if other.rep == self.rep:
             return self.sign * other.sign
         else:
@@ -324,17 +327,22 @@ class NQPauliOp(object):
         # Instead of computing P1*P2 on each Pauli in self (other), it computes P1*(I+P2).
         # (this is only correct if all the Paulis in `other` are *not* I)
 
-        assert(isinstance(state, NQPauliState))
-        assert(len(self) == len(state)), "Length mismatch!"
+        assert isinstance(state, NQPauliState)
+        assert len(self) == len(state), "Length mismatch!"
 
         ret = self.sign  # keep track of -1s
         for P1, P2, state_sign in zip(self.rep, state.rep, state.signs):
-            if _commute_parity(P1, P2) == -1: return 0
+            if _commute_parity(P1, P2) == -1:
+                return 0
             # doesn't commute so => P1+P1*P2 = P1+Q = traceless
-            elif P1 == 'I':  # I*(I+/-P) => (I+/-P) and "sign" of i-th el of state doesn't matter
+            elif (
+                P1 == "I"
+            ):  # I*(I+/-P) => (I+/-P) and "sign" of i-th el of state doesn't matter
                 pass
-            elif state_sign == -1:  # P*(I-P) => (P-I) and so sign (neg[i]) gets moved to I and affects the trace
-                assert(P1 == P2)
+            elif (
+                state_sign == -1
+            ):  # P*(I-P) => (P-I) and so sign (neg[i]) gets moved to I and affects the trace
+                assert P1 == P2
                 ret *= -1
         return ret
 
@@ -350,8 +358,11 @@ class NQPauliOp(object):
         -------
         bool
         """
-        assert(len(self) == len(other)), "Length mismatch!"
-        return bool(_np.prod([_commute_parity(P1, P2) for P1, P2 in zip(self.rep, other.rep)]) == 1)
+        assert len(self) == len(other), "Length mismatch!"
+        return bool(
+            _np.prod([_commute_parity(P1, P2) for P1, P2 in zip(self.rep, other.rep)])
+            == 1
+        )
 
     def icommutator_over_2(self, other):
         """
@@ -369,7 +380,7 @@ class NQPauliOp(object):
         NQPauliOp
         """
 
-        #Pauli commutators:
+        # Pauli commutators:
         # i(  ... x Pi Qi x ...
         #   - ... x Qi Pi x ... )
         # Now, Pi & Qi either commute or anticommute, i.e.
@@ -383,29 +394,39 @@ class NQPauliOp(object):
         #  Ri = i(+/-1)P' where P' is another Pauli. (this is same as case when Si == -1)
 
         def ri_operator(pauli1, pauli2):
-            """ the *operator* (no sign) part of R = pauli1*pauli2 """
-            if pauli1 + pauli2 in ("XY", "YX", "IZ", "ZI"): return "Z"
-            if pauli1 + pauli2 in ("XZ", "ZX", "IY", "YI"): return "Y"
-            if pauli1 + pauli2 in ("YZ", "ZY", "IX", "XI"): return "X"
-            if pauli1 + pauli2 in ("II", "XX", "YY", "ZZ"): return "I"
-            assert(False)
+            """the *operator* (no sign) part of R = pauli1*pauli2"""
+            if pauli1 + pauli2 in ("XY", "YX", "IZ", "ZI"):
+                return "Z"
+            if pauli1 + pauli2 in ("XZ", "ZX", "IY", "YI"):
+                return "Y"
+            if pauli1 + pauli2 in ("YZ", "ZY", "IX", "XI"):
+                return "X"
+            if pauli1 + pauli2 in ("II", "XX", "YY", "ZZ"):
+                return "I"
+            assert False
 
         def ri_sign(pauli1, pauli2, parity):
-            """ the +/-1 *sign* part of R = pauli1*pauli2 (doesn't count the i-factor in 3rd case)"""
-            if parity == 1: return 1  # pass commuteParity(pauli1,pauli2) to save computation
+            """the +/-1 *sign* part of R = pauli1*pauli2 (doesn't count the i-factor in 3rd case)"""
+            if parity == 1:
+                return 1  # pass commuteParity(pauli1,pauli2) to save computation
             return 1 if pauli1 + pauli2 in ("XY", "YZ", "ZX") else -1
 
-        assert(len(self) == len(other)), "Length mismatch!"
+        assert len(self) == len(other), "Length mismatch!"
         s1, s2 = self.rep, other.rep
         parities = [_commute_parity(pauli1, pauli2) for pauli1, pauli2 in zip(s1, s2)]
-        if _np.prod(parities) == 1: return None  # an even number of minus signs => commutator = 0
+        if _np.prod(parities) == 1:
+            return None  # an even number of minus signs => commutator = 0
 
-        op = ''.join([ri_operator(pauli1, pauli2) for pauli1, pauli2 in zip(s1, s2)])
+        op = "".join([ri_operator(pauli1, pauli2) for pauli1, pauli2 in zip(s1, s2)])
         num_i = parities.count(-1)  # number of i factors from 3rd Ri case above
-        sign = (-1)**((num_i + 1) / 2) * _np.prod([ri_sign(pauli1, pauli2, p)
-                                                   for pauli1, pauli2, p in zip(s1, s2, parities)])
-        if isinstance(other, NQPauliOp): other_sign = other.sign
-        elif isinstance(other, NQPauliState): other_sign = _np.product(other.signs)
-        else: raise ValueError("Can't take commutator with %s type" % str(type(other)))
+        sign = (-1) ** ((num_i + 1) / 2) * _np.prod(
+            [ri_sign(pauli1, pauli2, p) for pauli1, pauli2, p in zip(s1, s2, parities)]
+        )
+        if isinstance(other, NQPauliOp):
+            other_sign = other.sign
+        elif isinstance(other, NQPauliState):
+            other_sign = _np.product(other.signs)
+        else:
+            raise ValueError("Can't take commutator with %s type" % str(type(other)))
 
         return NQPauliOp(op, sign * self.sign * other_sign)

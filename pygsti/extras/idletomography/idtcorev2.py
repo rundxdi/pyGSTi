@@ -5,7 +5,6 @@ from itertools import product
 import matplotlib.pyplot as plt
 
 # non-relative imports for now
-from pygsti.extras.idletomography import idtcore
 import collections as _collections
 import itertools as _itertools
 import time as _time
@@ -152,7 +151,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                     _np.real_if_close(t),
                 ]
             )
-        
+
     elif error_gen_type == "s":
         num_qubits = len(prep_string)
         stim_prep = str(prep_string).strip("+-")
@@ -216,14 +215,16 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive Match \n\nS[{pauli_index}]; Experiment ({prep_string}/{meas_string}); Observable {mstring} Coef {t}\n"
                 )
-            coef_list.append([
-                "S",
-                pauli_index,
-                prep_string,
-                meas_string,
-                mstring,
-                _np.real_if_close(t),
-            ])
+            coef_list.append(
+                [
+                    "S",
+                    pauli_index,
+                    prep_string,
+                    meas_string,
+                    mstring,
+                    _np.real_if_close(t),
+                ]
+            )
     elif error_gen_type == "c":
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
@@ -289,15 +290,17 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive match \n\nC[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n"
                 )
-            coef_list.append([
-                "C",
-                pauli_index_1,
-                pauli_index_2,
-                prep_string,
-                meas_string,
-                mstring,
-                _np.real_if_close(t),
-            ])
+            coef_list.append(
+                [
+                    "C",
+                    pauli_index_1,
+                    pauli_index_2,
+                    prep_string,
+                    meas_string,
+                    mstring,
+                    _np.real_if_close(t),
+                ]
+            )
 
     elif error_gen_type == "a":
         pauli_index_1 = pauli_index[0]
@@ -363,21 +366,23 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 logger.info(
                     f"Positive Match\n\nA[{pauli_index_1},{pauli_index_2}]; Experiment ({prep_string}/{meas_string}); Observable {mstring}; Coef {t}\n"
                 )
-            coef_list.append([
-                "A",
-                pauli_index_1,
-                pauli_index_2,
-                prep_string,
-                meas_string,
-                mstring,
-                _np.real_if_close(t),
-            ])
+            coef_list.append(
+                [
+                    "A",
+                    pauli_index_1,
+                    pauli_index_2,
+                    prep_string,
+                    meas_string,
+                    mstring,
+                    _np.real_if_close(t),
+                ]
+            )
     return coef_list
 
 
 if __name__ == "__main__":
-    num_qubits = 2
-    max_weight = 1
+    num_qubits = 3
+    max_weight = 2
 
     HS_index_iterator = stim.PauliString.iter_all(
         num_qubits, min_weight=1, max_weight=max_weight
@@ -411,7 +416,6 @@ if __name__ == "__main__":
     hs_error_gen_classes = "hs"
     ca_error_gen_classes = "ca"
 
-
     hs_experiment = list(
         product(
             hs_error_gen_classes,
@@ -428,8 +432,6 @@ if __name__ == "__main__":
             measure_string_attributes,
         )
     )
-
-
 
     import pandas as pd
 
@@ -453,19 +455,15 @@ if __name__ == "__main__":
                 else:
                     data[egen] = [coef]
 
-    df = pd.DataFrame(data, index= jacobian_coef_dict["index"], columns=jacobian_coef_dict["columns"])
+    df = pd.DataFrame(
+        data, index=jacobian_coef_dict["index"], columns=jacobian_coef_dict["columns"]
+    )
     ic(df)
-
 
     # whatever = df.to_numpy()
     # inv = _np.linalg.pinv(whatever)
     # ic(whatever)
     # ic(inv)
-
-
-
-
-
 
     # quit()
 
@@ -490,8 +488,7 @@ if __name__ == "__main__":
     # experiment_set = OrderedSet()
 
     # egen_dict = {"H": OrderedSet(), "S": OrderedSet(), "C": OrderedSet(), "A": OrderedSet()}
-    
-    
+
     # # These come back as class, index, prep_str, meas_str, observ_str: coef
     # for key in hs_experiment + ca_experiment:
     #     elt = jacobian_coefficient_calc(*key)

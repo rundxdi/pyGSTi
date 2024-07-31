@@ -15,20 +15,20 @@ import warnings as _warnings
 
 import numpy as _np
 
-from . import idttools as _idttools
-from . import pauliobjs as _pobjs
-from .idtresults import IdleTomographyResults as _IdleTomographyResults
-from ... import baseobjs as _baseobjs
-from ... import models as _models
-from ... import tools as _tools
-from ...models import modelconstruction as _modelconstruction
-from ...modelmembers import states as _state
-from ...modelmembers import operations as _op
-from ...baseobjs.verbosityprinter import VerbosityPrinter as _VerbosityPrinter
-from ...circuits.circuit import Circuit as _Circuit
+from pygsti.extras.idletomography import idttools as _idttools
+from pygsti.extras.idletomography import pauliobjs as _pobjs
+from pygsti.extras.idletomography.idtresults import IdleTomographyResults as _IdleTomographyResults
+from pygsti import baseobjs as _baseobjs
+from pygsti import models as _models
+from pygsti import tools as _tools
+from pygsti.models import modelconstruction as _modelconstruction
+from pygsti.modelmembers import states as _state
+from pygsti.modelmembers import operations as _op
+from pygsti.baseobjs.verbosityprinter import VerbosityPrinter as _VerbosityPrinter
+from pygsti.circuits.circuit import Circuit as _Circuit
 from pygsti.baseobjs import Basis
 from itertools import product, permutations
-from ...baseobjs import basisconstructors
+from pygsti.baseobjs import basisconstructors
 import stim
 
 
@@ -1549,6 +1549,8 @@ def make_idle_tomography_list(
     if force_fid_pairs:
         pauli_fidpairs = force_fid_pairs
     else:
+        pauli_fidpairs=idle_tomography_fidpairs(nqubits)
+    if False:
         pauli_fidpairs = idle_tomography_fidpairs(
             nqubits,
             maxweight,
