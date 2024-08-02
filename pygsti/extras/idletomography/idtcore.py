@@ -1176,7 +1176,7 @@ def idle_tomography_fidpairs(nqubits):
     # we also want all possible combinations of sign for each the pauli
     # observable on each qubit. The NQPauliState expects these to be either 0
     # for + or 1 for -.
-    signs = list(product([-1, 1], repeat=nqubits))
+    signs = list(product([1], repeat=nqubits))
 
     fidpairs = []
     for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
@@ -1752,6 +1752,8 @@ def compute_observed_err_rate(
     # telling us which 1 or 2 qubits to take the <Z> or <ZZ> expectation value of
     # (since the meas fiducial gets us in the right basis) -- i.e. the qubits to *not* trace over.
     obs_indices = [i for i, letter in enumerate(observable.rep) if letter != "I"]
+    # from icecream import ic
+    # ic(obs_indices)
     minus_sign = _np.prod([pauli_meas.signs[i] for i in obs_indices])
 
     def unsigned_exptn_and_weight(circuit, observed_indices):
