@@ -82,13 +82,14 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
     coef_list = []
     if error_gen_type == "h":
         num_qubits = len(prep_string)
+        prep_sign = prep_string.sign
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
         prep_string_iterator_extended = stim.PauliString.iter_all(
             num_qubits=num_qubits, allowed_paulis=stim_prep
         )
         prep_string_iterator = [
-            pstring
+            prep_sign * pstring
             for pstring in prep_string_iterator_extended
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))

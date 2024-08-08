@@ -1262,26 +1262,51 @@ def idle_tomography_fidpairs(nqubits):
     """
 
     pauli_strings = ["X", "Y", "Z"]
+
     nq_pauli_strings = list(
         product(pauli_strings, repeat=nqubits)
     )  # skip the all identity string]
     # nq_pauli_strings.pop(nq_pauli_strings.index("I"*nqubits))
+    from icecream import ic
 
+    # ic(nqubits)
+    # ic(nq_pauli_strings)
     # we also want all possible combinations of sign for each the pauli
     # observable on each qubit. The NQPauliState expects these to be either 0
     # for + or 1 for -.
+    if nqubits == 1:
+        signs = list(product([1, -1], repeat=1))
+    else:
+        signs = list(product([1, -1], repeat=1)) + list(
+            product([1], repeat=nqubits - 1)
+        )
     signs = list(product([1], repeat=nqubits))
-
+    # ic(signs)
+    flipped_signs = [-1] + [1] * (nqubits - 1)
+    flipped_signs = [tuple(flipped_signs)]
+    # ic(flipped_signs)
     fidpairs = []
     for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
+        # ic(prep_string)
+        # ic(meas_string)
         for sign in signs:
             fidpairs.append(
                 (
                     _pobjs.NQPauliState(prep_string, sign),
-                    _pobjs.NQPauliState(meas_string, signs[-1]),
+                    _pobjs.NQPauliState(meas_string, signs[0]),
                 )
             )
-
+    # for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
+    #     ic(prep_string)
+    #     ic(meas_string)
+    #     for sign in flipped_signs:
+    #         fidpairs.append(
+    #             (
+    #                 _pobjs.NQPauliState(prep_string, sign),
+    #                 _pobjs.NQPauliState(meas_string, tuple([1]*nqubits)),
+    #             )
+    #         )
+    ic(fidpairs)
     return fidpairs
 
 
@@ -1846,8 +1871,10 @@ def compute_observed_err_rate(
     # telling us which 1 or 2 qubits to take the <Z> or <ZZ> expectation value of
     # (since the meas fiducial gets us in the right basis) -- i.e. the qubits to *not* trace over.
     obs_indices = [i for i, letter in enumerate(observable.rep) if letter != "I"]
-    # from icecream import ic
-    # ic(obs_indices)
+    from icecream import ic
+
+    ic(obs_indices)
+    ic(pauli_meas)
     minus_sign = _np.prod([pauli_meas.signs[i] for i in obs_indices])
 
     def unsigned_exptn_and_weight(circuit, observed_indices):
