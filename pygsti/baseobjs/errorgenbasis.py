@@ -234,9 +234,9 @@ class CompleteElementaryErrorgenBasis(ElementaryErrorgenBasis):
         if must_overlap_with_these_sslbls is not None and not isinstance(must_overlap_with_these_sslbls, set):
             must_overlap_with_these_sslbls = set(must_overlap_with_these_sslbls)
 
+        assert(state_space.is_entirely_qubits), "FOGI only works for models containing just qubits (so far)"
+        sslbls = state_space.sole_tensor_product_block_labels  # all the model's state space labels
         if max_weight is None:
-            assert(state_space.is_entirely_qubits), "FOGI only works for models containing just qubits (so far)"
-            sslbls = state_space.sole_tensor_product_block_labels  # all the model's state space labels
             max_weight = len(sslbls)
 
         # Let k be len(nontrivial_bels)
@@ -295,9 +295,10 @@ class CompleteElementaryErrorgenBasis(ElementaryErrorgenBasis):
         if must_overlap_with_these_sslbls is not None and not isinstance(must_overlap_with_these_sslbls, set):
             must_overlap_with_these_sslbls = set(must_overlap_with_these_sslbls)
 
+        
+        assert(state_space.is_entirely_qubits), "FOGI only works for models containing just qubits (so far)"
+        sslbls = state_space.sole_tensor_product_block_labels  # all the model's state space labels
         if max_weight is None:
-            assert(state_space.is_entirely_qubits), "FOGI only works for models containing just qubits (so far)"
-            sslbls = state_space.sole_tensor_product_block_labels  # all the model's state space labels
             max_weight = len(sslbls)
 
         # Let k be len(nontrivial_bels)
