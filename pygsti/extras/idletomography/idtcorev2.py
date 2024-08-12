@@ -155,6 +155,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
 
     elif error_gen_type == "s":
         num_qubits = len(prep_string)
+        prep_sign = prep_string.sign
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
         prep_string_iterator_extended = stim.PauliString.iter_all(
@@ -162,7 +163,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         )
 
         prep_string_iterator = [
-            pstring
+            prep_sign * pstring
             for pstring in prep_string_iterator_extended
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
@@ -230,6 +231,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
         num_qubits = len(prep_string)
+        prep_sign = prep_string.sign
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
 
@@ -238,7 +240,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         )
 
         prep_string_iterator = [
-            pstring
+            prep_sign * pstring
             for pstring in prep_string_iterator_extended
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
@@ -307,6 +309,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         pauli_index_1 = pauli_index[0]
         pauli_index_2 = pauli_index[1]
         num_qubits = len(prep_string)
+        prep_sign = prep_string.sign
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
 
@@ -315,7 +318,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         )
 
         prep_string_iterator = [
-            pstring
+            prep_sign * pstring
             for pstring in prep_string_iterator_extended
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
