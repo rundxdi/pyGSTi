@@ -1296,17 +1296,17 @@ def idle_tomography_fidpairs(nqubits):
                     _pobjs.NQPauliState(meas_string, signs[0]),
                 )
             )
-    # for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
-    #     ic(prep_string)
-    #     ic(meas_string)
-    #     for sign in flipped_signs:
-    #         fidpairs.append(
-    #             (
-    #                 _pobjs.NQPauliState(prep_string, sign),
-    #                 _pobjs.NQPauliState(meas_string, tuple([1]*nqubits)),
-    #             )
-    #         )
-    ic(fidpairs)
+    for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
+        # ic(prep_string)
+        # ic(meas_string)
+        for sign in flipped_signs:
+            fidpairs.append(
+                (
+                    _pobjs.NQPauliState(prep_string, sign),
+                    _pobjs.NQPauliState(meas_string, tuple([1] * nqubits)),
+                )
+            )
+    # ic(fidpairs)
     return fidpairs
 
 
