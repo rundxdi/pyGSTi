@@ -85,12 +85,13 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         prep_sign = prep_string.sign
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
-        prep_string_iterator_extended = stim.PauliString.iter_all(
-            num_qubits=num_qubits, allowed_paulis=stim_prep
+        prep_string_iterator_extended = list(
+            stim.PauliString.iter_all(num_qubits=num_qubits, allowed_paulis=stim_prep)
         )
-        prep_string_iterator = [
+        prep_string_iterator = [prep_string_iterator_extended[0]]
+        prep_string_iterator += [
             prep_sign * pstring
-            for pstring in prep_string_iterator_extended
+            for pstring in prep_string_iterator_extended[1:]
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
                 and set(pstring.pauli_indices("Y")).issubset(
@@ -158,13 +159,13 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         prep_sign = prep_string.sign
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
-        prep_string_iterator_extended = stim.PauliString.iter_all(
-            num_qubits=num_qubits, allowed_paulis=stim_prep
+        prep_string_iterator_extended = list(
+            stim.PauliString.iter_all(num_qubits=num_qubits, allowed_paulis=stim_prep)
         )
-
-        prep_string_iterator = [
+        prep_string_iterator = [prep_string_iterator_extended[0]]
+        prep_string_iterator += [
             prep_sign * pstring
-            for pstring in prep_string_iterator_extended
+            for pstring in prep_string_iterator_extended[1:]
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
                 and set(pstring.pauli_indices("Y")).issubset(
@@ -235,13 +236,13 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
 
-        prep_string_iterator_extended = stim.PauliString.iter_all(
-            num_qubits=num_qubits, allowed_paulis=stim_prep
+        prep_string_iterator_extended = list(
+            stim.PauliString.iter_all(num_qubits=num_qubits, allowed_paulis=stim_prep)
         )
-
-        prep_string_iterator = [
+        prep_string_iterator = [prep_string_iterator_extended[0]]
+        prep_string_iterator += [
             prep_sign * pstring
-            for pstring in prep_string_iterator_extended
+            for pstring in prep_string_iterator_extended[1:]
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
                 and set(pstring.pauli_indices("Y")).issubset(
@@ -313,13 +314,13 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         stim_prep = str(prep_string).strip("+-")
         stim_meas = str(meas_string).strip("+-")
 
-        prep_string_iterator_extended = stim.PauliString.iter_all(
-            num_qubits=num_qubits, allowed_paulis=stim_prep
+        prep_string_iterator_extended = list(
+            stim.PauliString.iter_all(num_qubits=num_qubits, allowed_paulis=stim_prep)
         )
-
-        prep_string_iterator = [
+        prep_string_iterator = [prep_string_iterator_extended[0]]
+        prep_string_iterator += [
             prep_sign * pstring
-            for pstring in prep_string_iterator_extended
+            for pstring in prep_string_iterator_extended[1:]
             if (
                 set(pstring.pauli_indices("X")).issubset(prep_string.pauli_indices("X"))
                 and set(pstring.pauli_indices("Y")).issubset(
@@ -330,6 +331,8 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                 )
             )
         ]
+
+        # ic(prep_string_iterator)
         meas_string_iterator_extended = stim.PauliString.iter_all(
             num_qubits=num_qubits, allowed_paulis=stim_meas
         )
@@ -350,6 +353,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
         for mstring in meas_string_iterator:
             t = 0
             for string in prep_string_iterator:
+                # ic(string.to_unitary_matrix(endian="little"))
                 error_gen = anti_symmetric_error_generator(
                     string.to_unitary_matrix(endian="little"),
                     pauli_index_1.to_unitary_matrix(endian="little"),
