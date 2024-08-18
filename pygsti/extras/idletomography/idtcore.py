@@ -1274,32 +1274,12 @@ def idle_tomography_fidpairs(nqubits):
     # we also want all possible combinations of sign for each the pauli
     # observable on each qubit. The NQPauliState expects these to be either 0
     # for + or 1 for -.
-    if nqubits == 1:
-        signs = list(product([1, -1], repeat=1))
-    else:
-        signs = list(product([1, -1], repeat=1)) + list(
-            product([1], repeat=nqubits - 1)
-        )
-    signs = list(product([1], repeat=nqubits))
-    # ic(signs)
-    flipped_signs = [-1] + [1] * (nqubits - 1)
-    flipped_signs = [tuple(flipped_signs)]
-    # ic(flipped_signs)
+    signs = list(product([1,-1], repeat=nqubits))
     fidpairs = []
     for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
         # ic(prep_string)
         # ic(meas_string)
         for sign in signs:
-            fidpairs.append(
-                (
-                    _pobjs.NQPauliState(prep_string, sign),
-                    _pobjs.NQPauliState(meas_string, signs[0]),
-                )
-            )
-    for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
-        # ic(prep_string)
-        # ic(meas_string)
-        for sign in flipped_signs:
             fidpairs.append(
                 (
                     _pobjs.NQPauliState(prep_string, sign),

@@ -80,6 +80,8 @@ def anti_symmetric_error_generator(initial_state, pauli_index_1, pauli_index_2):
 
 def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_string):
     coef_list = []
+    sign_string = prep_string[0]
+    prep_string = prep_string[1]
     if error_gen_type == "h":
         num_qubits = len(prep_string)
         prep_sign = prep_string.sign
@@ -148,6 +150,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                     "H",
                     pauli_index,
                     prep_string,
+                    sign_string,
                     meas_string,
                     mstring,
                     _np.real_if_close(t),
@@ -223,6 +226,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                     "S",
                     pauli_index,
                     prep_string,
+                    sign_string,
                     meas_string,
                     mstring,
                     _np.real_if_close(t),
@@ -300,6 +304,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                     pauli_index_1,
                     pauli_index_2,
                     prep_string,
+                    sign_string,
                     meas_string,
                     mstring,
                     _np.real_if_close(t),
@@ -380,6 +385,7 @@ def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_str
                     pauli_index_1,
                     pauli_index_2,
                     prep_string,
+                    sign_string,
                     meas_string,
                     mstring,
                     _np.real_if_close(t),
