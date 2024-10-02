@@ -1276,17 +1276,18 @@ def idle_tomography_fidpairs(nqubits):
     # for + or 1 for -.
     signs = list(product([1,-1], repeat=nqubits))
     fidpairs = []
-    for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
+    for sign in signs:
+        for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
         # ic(prep_string)
         # ic(meas_string)
-        for sign in signs:
+        
             fidpairs.append(
                 (
                     _pobjs.NQPauliState(prep_string, sign),
                     _pobjs.NQPauliState(meas_string, tuple([1] * nqubits)),
                 )
             )
-    # ic(fidpairs)
+    ic(fidpairs)
     return fidpairs
 
 
