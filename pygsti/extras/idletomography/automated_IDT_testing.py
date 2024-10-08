@@ -3,10 +3,16 @@ from itertools import product
 import itertools as _itertools
 import stim
 from idtcorev2 import jacobian_coefficient_calc
+import pygsti
 from pygsti.circuits.circuit import Circuit
 from pygsti.baseobjs import CompleteElementaryErrorgenBasis, QubitSpace, Label, Basis
 import pandas as pd
-
+import math
+import numpy as np
+from pygsti.extras import idletomography as idt
+from idttools import allerrors, all_full_length_observables, alloutcomes
+import collections as _collections
+import json
             
 def generate_experiment_design_stuff(num_qubits, max_weight):
     HS_index_iterator = stim.PauliString.iter_all(
@@ -23,8 +29,8 @@ def generate_experiment_design_stuff(num_qubits, max_weight):
         used_indices_2 = set(
             i for i, ltr in enumerate(str(pauli_pair[1])[1:]) if ltr != "_"
         )
-        intersect = used_indices_1.intersection(used_indices_2)
-        if len(intersect) > 0 and len(intersect) <= max_weight:
+        union = used_indices_1.union(used_indices_2)
+        if len(union) > 0 and len(union) <= max_weight:
             return True
 
     ca_pauli_node_attributes = [
@@ -32,22 +38,21 @@ def generate_experiment_design_stuff(num_qubits, max_weight):
         for ppair in ca_pauli_node_attributes
         if ca_pauli_weight_filter(ppair, max_weight)
     ]
-
-    measure_string_iterator = stim.PauliString.iter_all(
-        num_qubits, min_weight=num_qubits
-    )
-    prep_string_iterator = product([1,-1],[p for p in measure_string_iterator])
+    measure_string_iterator = stim.PauliString.iter_all(num_qubits, min_weight=num_qubits)
+    sign_iterator = list(product([1,-1], repeat=num_qubits))
+    awk_iterator = list(i[0] for i in product(sign_iterator, [p for p in measure_string_iterator]))
+    prep_string_iterator = product([math.prod([item for item in sign_tuple]) for sign_tuple in sign_iterator],[p for p in measure_string_iterator])
     measure_string_attributes = list([p for p in measure_string_iterator])
     prep_string_attributes = list(a*b for a,b in prep_string_iterator)
-    prep_meas_pair = list(product(prep_string_attributes, measure_string_attributes))
-    return prep_meas_pair, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes
+    return awk_iterator, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes
 
-def jacobian_df(hs_error_gen_classes, ca_error_gen_classes, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes):
+def jacobian_df(hs_error_gen_classes, ca_error_gen_classes, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes, awk_iterator):
+    
     hs_experiment = list(
         product(
             hs_error_gen_classes,
             pauli_node_attributes,
-            prep_string_attributes,
+            zip(awk_iterator, prep_string_attributes),
             measure_string_attributes,
         )
     )
@@ -55,13 +60,14 @@ def jacobian_df(hs_error_gen_classes, ca_error_gen_classes, pauli_node_attribute
         product(
             ca_error_gen_classes,
             ca_pauli_node_attributes,
-            prep_string_attributes,
+            zip(awk_iterator, prep_string_attributes),
             measure_string_attributes,
         )
     )
 
     # df = pd.DataFrame()
     jacobian_coef_dict = {"index": OrderedSet(), "columns": OrderedSet()}
+    data = {}
 
     # These come back as class, index, prep_str, meas_str, observ_str: coef
     # I THINK this is right, should double check and write unit tests
@@ -69,8 +75,9 @@ def jacobian_df(hs_error_gen_classes, ca_error_gen_classes, pauli_node_attribute
         elt = jacobian_coefficient_calc(*key)
         for el in elt:
             if el:
-                observable = ",".join(str(s)[1:] for s in el[-4:-1])
-                egen = ",".join(str(s) for s in el[:-4])
+                observable = ",".join(str(s)[:] for s in el[-5:-1])
+                sign_string = el[-4]
+                egen = ",".join(str(s) for s in el[:-5])
                 coef = int(el[-1])
                 jacobian_coef_dict["index"].add(observable)
                 jacobian_coef_dict["columns"].add(egen)
@@ -109,7 +116,7 @@ def make_idt_circuits(num_qubits):
     idle_experiments = idt.make_idle_tomography_list(
             num_qubits, max_lengths, paulidicts, idle_string=global_idle_string
         )
-    return idle_experiments, pspec
+    return idle_experiments, pspec, paulidicts
 
 def create_noise_model(term_dict, mdl_pspec):
     mdl_datagen = pygsti.models.create_crosstalk_free_model(
@@ -129,10 +136,11 @@ def report_observed_rates(nqubits,
     max_lengths,
     pauli_basis_dicts,
     maxweight=2,
-    idle_string=global_idle_string):
+    idle_string=None):
+
+    idle_string = [Label("Gi", tuple(i for i in range(nqubits)))]
     
     all_fidpairs = dict(enumerate(idt.idle_tomography_fidpairs(nqubits)))
-    # print(all_fidpairs)
     if nqubits == 1:  # special case where line-labels may be ('*',)
         if len(dataset) > 0:
             first_circuit = list(dataset.keys())[0]
@@ -149,11 +157,9 @@ def report_observed_rates(nqubits,
     obs_error_rates_by_exp = {}
     whatever = {}
     for ifp, pauli_fidpair in all_fidpairs.items():
-        all_observables = all_full_length_observables(
-            pauli_fidpair[1], nqubits
-        )
         all_outcomes = idt.idttools.allobservables(pauli_fidpair[1], maxweight)
         infos_for_this_fidpair = _collections.OrderedDict()
+
         for j, out in enumerate(all_outcomes):
             info = idt.compute_observed_err_rate(
                 dataset,
@@ -165,40 +171,33 @@ def report_observed_rates(nqubits,
                 fit_order,
             )
 
-            #info["jacobian row"] = full_jacobian[ifp]
             infos_for_this_fidpair[out] = info
-            # ic(infos_for_this_fidpair)
             
             obs_infos[ifp] = infos_for_this_fidpair
             observed_error_rates[ifp] = [
                 info["rate"] for info in infos_for_this_fidpair.values()
             ]
-            obs_error_rates_by_exp[str(pauli_fidpair[0]).replace("+",""), str(pauli_fidpair[1]).replace("+",""), str(out).replace("+","").replace("I","_")] = [
+            obs_error_rates_by_exp[str(pauli_fidpair[0]).replace("+",""), str(pauli_fidpair[1]).replace("+",""), str(out).replace("I","_")] = [
                 info["rate"] for info in infos_for_this_fidpair.values()
             ][-1]
-            # obs_err_rates = np.concatenate([np.array([
-            #                 observed_error_rates[i]
-            #                 for i in range(len(all_fidpairs))
-            #                 ]
-            #             )
-            #         ]
-            #     )
         whatever[pauli_fidpair] = 1
     return observed_error_rates, obs_error_rates_by_exp
 
 
 def observed_rates_to_intrinsic(j_df, observed_rates):
-    j = df.to_numpy()
+    j = j_df.to_numpy()
     jinv = np.linalg.pinv(j)
     intrins_errs = jinv @ observed_rates
     return intrins_errs
     
     
 if __name__ == '__main__':
-    num_qubits = [1,2,3]
-    rate = 1e-3
+    num_qubits = [1,2]
+    max_lengths = [1,2]
+    rate = 1e-4
     hs_error_gen_classes = "hs"
     ca_error_gen_classes = "ca"
+    summary_output_of_horror = {}
 
     single_rate_term_dicts = []
     for i, nq in enumerate(num_qubits):
@@ -213,21 +212,25 @@ if __name__ == '__main__':
                 
     
     for i, nq in enumerate(num_qubits):
-        idt_experiment, target_pspec = make_idt_circuits(nq)
+        idt_experiment, target_pspec, paulidicts = make_idt_circuits(nq)
         for j, wt in enumerate(range(1,nq+1)):
-            prep_meas_pair, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes = generate_experiment_design_stuff(nq, max_weight=wt)
-            jac_df = jacobian_df(hs_error_gen_classes, ca_error_gen_classes, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes)
+            awk_iterator, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes = generate_experiment_design_stuff(nq, max_weight=wt)
+            jac_df = jacobian_df(hs_error_gen_classes, ca_error_gen_classes, pauli_node_attributes, prep_string_attributes, measure_string_attributes, ca_pauli_node_attributes, awk_iterator)
             for term_dict in single_rate_term_dicts[i][j]:
                 noise_model = create_noise_model(term_dict, target_pspec)
                 noisy_ds = simulate_noisy_idt(noise_model, idt_experiment, seed = 8082024)
-                observed_error_rates, obs_error_rates_by_exp = report_observed_rates(num_qubits, ds, max_lengths, paulidicts)
+                
+                observed_error_rates, obs_error_rates_by_exp = report_observed_rates(nq, noisy_ds, max_lengths, paulidicts)
                 obs_rats = [v for v in obs_error_rates_by_exp.values()]
                 intrinsic_rates = observed_rates_to_intrinsic(jac_df, obs_rats)
                 #convert the keys in df.columns to error generator labels.
                 
-                intrinsic_rates_dict = dict(zip(df.columns, intrinsic_rates))
-                estimated_rate_diff = [intrinsic_rates_dict for ]
-
+                intrinsic_rates_dict = dict(zip(jac_df.columns, intrinsic_rates))
+                #estimated_rate_diff = [intrinsic_rates_dict for ]
+                summary_output_of_horror[str(term_dict)] = intrinsic_rates_dict
+    with open("why_would_i_do_this.json", "w") as fo:
+        json.dump(summary_output_of_horror, fo)
+    
                 
                 
             
