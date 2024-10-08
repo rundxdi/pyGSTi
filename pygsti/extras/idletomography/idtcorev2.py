@@ -482,7 +482,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(
         data, index=jacobian_coef_dict["index"], columns=jacobian_coef_dict["columns"]
     )
-    ic(df)
+    # ic(df)
 
     # whatever = df.to_numpy()
     # inv = _np.linalg.pinv(whatever)
