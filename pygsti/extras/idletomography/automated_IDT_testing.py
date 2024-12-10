@@ -255,6 +255,9 @@ def parse_json(filename, num_qubits=2):
             ):
                 placeholder_str[int(i)] = j
             placeholder_str = str.join("", ["+"] + placeholder_str)
+            placeholder_str = str.join(
+                ",", [parsed_key["error_gen_class"]] + [placeholder_str]
+            )
         else:
             placeholder_str = [["_"] * num_qubits, ["_"] * num_qubits]
             for j in range(2):
@@ -263,6 +266,12 @@ def parse_json(filename, num_qubits=2):
                 ):
                     placeholder_str[j][int(i)] = k
                 placeholder_str[j] = str.join("", ["+"] + placeholder_str[j])
+            placeholder_str = str.join(
+                ",", [parsed_key["error_gen_class"]] + placeholder_str
+            )
+        placeholder_str = placeholder_str.replace("I", "_")
+        print(placeholder_str, parsed_key["error_rate"], v[placeholder_str])
+        # exit()
     return results
 
 
