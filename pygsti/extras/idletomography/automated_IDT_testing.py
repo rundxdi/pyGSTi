@@ -14,6 +14,7 @@ from idttools import allerrors, all_full_length_observables, alloutcomes
 import collections as _collections
 import json
 import more_itertools
+import re
 
 
 def generate_experiment_design_stuff(num_qubits, max_weight):
@@ -226,9 +227,42 @@ def observed_rates_to_intrinsic(j_df, observed_rates):
     return intrins_errs
 
 
+def parse_key(key):
+    regexed_key = re.findall(r"\w+", key)
+    parsed_key = {}
+    parsed_key["error_gen_class"] = regexed_key[0]
+    if parsed_key["error_gen_class"] in "HS":
+        parsed_key["error_gen_index"] = regexed_key[1:2]
+        parsed_key["qubit_index"] = regexed_key[2:-2]
+    else:
+        parsed_key["error_gen_index"] = regexed_key[1:3]
+        parsed_key["qubit_index"] = regexed_key[3:-2]
+    parsed_key["error_rate"] = str.join(".", regexed_key[-2:])
+    return parsed_key
+
+
 def parse_json(filename, num_qubits=2):
     with open(filename, "r") as fr:
         results = json.load(fr)
+    for k, v in results.items():
+
+        parsed_key = parse_key(k)
+        if parsed_key["error_gen_class"] in "HS":
+            placeholder_str = ["_"] * num_qubits
+            for i, j in zip(
+                parsed_key["qubit_index"],
+                parsed_key["error_gen_index"][0],
+            ):
+                placeholder_str[int(i)] = j
+            placeholder_str = str.join("", ["+"] + placeholder_str)
+        else:
+            placeholder_str = [["_"] * num_qubits, ["_"] * num_qubits]
+            for j in range(2):
+                for i, k in zip(
+                    parsed_key["qubit_index"], parsed_key["error_gen_index"][j]
+                ):
+                    placeholder_str[j][int(i)] = k
+                placeholder_str[j] = str.join("", ["+"] + placeholder_str[j])
     return results
 
 
@@ -260,14 +294,12 @@ def length_rule(min_length=1, max_length=64, iter_rule="log"):
 
 
 if __name__ == "__main__":
-    bah = length_rule(iter_rule="quad")
-    print(bah)
-    exit()
+
     x = parse_json("why_would_i_do_this.json")
-    print(x)
+    # print(x)
     for k, v in x.items():
         print(k)
-        print(v)
+        print(type(k))
         exit()
     exit()
 
