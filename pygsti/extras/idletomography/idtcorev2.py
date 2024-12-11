@@ -85,11 +85,12 @@ def pauli_prep_term_sign(sign_string, prep_string):
     # ic(prep_string)
     # ic(str(prep_string))
     # ic(list(prep_string))
-    for psign,prep in zip(sign_string, list(prep_string)):
+    for psign, prep in zip(sign_string, list(prep_string)):
         if psign < 0 and prep:
             sign *= -1
     # ic(sign)
     return sign
+
 
 def jacobian_coefficient_calc(error_gen_type, pauli_index, prep_string, meas_string):
     coef_list = []
@@ -413,7 +414,7 @@ if __name__ == "__main__":
     )
 
     pauli_node_attributes = list([p for p in HS_index_iterator])
-    ca_pauli_node_attributes = list(_itertools.combinations(pauli_node_attributes, 2))
+    ca_pauli_node_attributes = list(_itertools.permutations(pauli_node_attributes, 2))
 
     def ca_pauli_weight_filter(pauli_pair, max_weight):
         used_indices_1 = set(

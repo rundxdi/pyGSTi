@@ -445,15 +445,15 @@ def dict_to_jacobian(coef_dict, classification, numQubits, all_fidpairs):
         pauliDictProduct = dict(
             enumerate(
                 list(
-                    _itertools.combinations(
+                    _itertools.permutations(
                         [key for key in pauliDict.keys() if key != identKey], 2
                     )
                 )
             )
         )
 
-        # print(f"{pauliDictProduct = }")
-        # quit()
+        print(f"{pauliDictProduct = }")
+        quit()
 
     else:
         print(
@@ -1274,13 +1274,13 @@ def idle_tomography_fidpairs(nqubits):
     # we also want all possible combinations of sign for each the pauli
     # observable on each qubit. The NQPauliState expects these to be either 0
     # for + or 1 for -.
-    signs = list(product([1,-1], repeat=nqubits))
+    signs = list(product([1, -1], repeat=nqubits))
     fidpairs = []
     for sign in signs:
         for prep_string, meas_string in product(nq_pauli_strings, repeat=2):
-        # ic(prep_string)
-        # ic(meas_string)
-        
+            # ic(prep_string)
+            # ic(meas_string)
+
             fidpairs.append(
                 (
                     _pobjs.NQPauliState(prep_string, sign),
@@ -1577,18 +1577,18 @@ def determine_paulidicts(model):
         Gzl = found["Gz"]
 
         prepDict = {
-            "X": (Gxl,Gzl),
+            "X": (Gxl, Gzl),
             "Y": (Gxl,) * 3,
             "Z": (),
-            "-X": (Gxl,Gzl) * 3,
+            "-X": (Gxl, Gzl) * 3,
             "-Y": (Gxl,),
             "-Z": (Gxl, Gxl),
         }
         measDict = {
-            "X": (Gxl,Gzl) * 3,
+            "X": (Gxl, Gzl) * 3,
             "Y": (Gxl,),
             "Z": (),
-            "-X": (Gxl,Gzl),
+            "-X": (Gxl, Gzl),
             "-Y": (Gxl,) * 3,
             "-Z": (Gxl, Gxl),
         }
@@ -1610,7 +1610,7 @@ def make_idle_tomography_list(
     preferred_prep_basis_signs="auto",
     preferred_meas_basis_signs="auto",
     force_fid_pairs=False,
-    qubit_labels = None,
+    qubit_labels=None,
 ):
     """
     Construct the list of experiments needed to perform idle tomography.
@@ -1690,7 +1690,8 @@ def make_idle_tomography_list(
         )
 
     fidpairs = [
-        (x.to_circuit(prepDict, qubit_labels), y.to_circuit(measDict, qubit_labels)) for x, y in pauli_fidpairs
+        (x.to_circuit(prepDict, qubit_labels), y.to_circuit(measDict, qubit_labels))
+        for x, y in pauli_fidpairs
     ]  # e.g. convert ("XY","ZX") to tuple of Circuits
 
     listOfExperiments = []
@@ -1718,6 +1719,7 @@ def make_idle_tomography_lists(
     ham_tmpl="auto",
     preferred_prep_basis_signs="auto",
     preferred_meas_basis_signs="auto",
+    qubit_labels=None,
 ):
     """
     Construct lists of experiments, one for each maximum-length value, needed
@@ -1795,7 +1797,8 @@ def make_idle_tomography_lists(
     )
 
     fidpairs = [
-        (x.to_circuit(prepDict), y.to_circuit(measDict)) for x, y in pauli_fidpairs
+        (x.to_circuit(prepDict, qubit_labels), y.to_circuit(measDict, qubit_labels))
+        for x, y in pauli_fidpairs
     ]  # e.g. convert ("XY","ZX") to tuple of Circuits
 
     listOfListsOfExperiments = []
@@ -1826,6 +1829,7 @@ def compute_observed_err_rate(
     observable,
     max_lengths,
     fit_order=1,
+    qubit_labels=None,
 ):
     """
     Extract the observed error rate from a series of experiments which prepares
@@ -1871,8 +1875,8 @@ def compute_observed_err_rate(
     pauli_prep, pauli_meas = pauli_fidpair
 
     prepDict, measDict = pauli_basis_dicts
-    prepFid = pauli_prep.to_circuit(prepDict)
-    measFid = pauli_meas.to_circuit(measDict)
+    prepFid = pauli_prep.to_circuit(prepDict, qubit_labels)
+    measFid = pauli_meas.to_circuit(measDict, qubit_labels)
 
     # observable is always equal to pauli_meas (up to signs) with all but 1 or 2
     # (maxErrWt in general) of it's elements replaced with 'I', essentially just

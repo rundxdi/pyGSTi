@@ -23,7 +23,7 @@ def generate_experiment_design_stuff(num_qubits, max_weight):
     )
 
     pauli_node_attributes = list([p for p in HS_index_iterator])
-    ca_pauli_node_attributes = list(_itertools.combinations(pauli_node_attributes, 2))
+    ca_pauli_node_attributes = list(_itertools.permutations(pauli_node_attributes, 2))
 
     def ca_pauli_weight_filter(pauli_pair, max_weight):
         used_indices_1 = set(
@@ -270,10 +270,12 @@ def parse_json(filename, num_qubits=2):
                 ",", [parsed_key["error_gen_class"]] + placeholder_str
             )
         placeholder_str = placeholder_str.replace("I", "_")
-        print(placeholder_str, parsed_key["error_rate"], v[placeholder_str])
+        print(placeholder_str, parsed_key["error_rate"], v.get(placeholder_str))
         # exit()
     return results
 
+
+## C _X, * is creating too few things....
 
 _predefined_rules = ["log", "quad", "lin"]
 
@@ -302,15 +304,15 @@ def length_rule(min_length=1, max_length=64, iter_rule="log"):
         return list(range(min_length, max_length + 1))
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    x = parse_json("why_would_i_do_this.json")
-    # print(x)
-    for k, v in x.items():
-        print(k)
-        print(type(k))
-        exit()
-    exit()
+#     x = parse_json("why_would_i_do_this.json")
+#     # print(x)
+#     for k, v in x.items():
+#         print(k)
+#         print(type(k))
+#         exit()
+#     exit()
 
 if __name__ == "__main__":
     num_qubits = [1, 2]
