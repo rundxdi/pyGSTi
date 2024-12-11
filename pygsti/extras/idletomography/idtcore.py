@@ -1517,6 +1517,9 @@ def determine_paulidicts(model):
     Gy = _modelconstruction.create_operation(
         "Y(pi/2,Q0)", [("Q0",)], basis=pp, parameterization="static"
     ).to_dense()
+    Gz = _modelconstruction.create_operation(
+        "Z(pi/2,Q0)", [("Q0",)], basis=pp, parameterization="static"
+    ).to_dense()
 
     # try to find 1-qubit pi/2 rotations
     found = {}
@@ -1545,6 +1548,8 @@ def determine_paulidicts(model):
             found["Gx"] = gl.name
         elif _np.linalg.norm(action_on_qubit - Gy) < 1e-6:
             found["Gy"] = gl.name
+        elif _np.linalg.norm(action_on_qubit - Gz) < 1e-6:
+            found["Gz"] = gl.name
 
     if "Gx" in found and "Gy" in found:
         Gxl = found["Gx"]
@@ -1567,6 +1572,27 @@ def determine_paulidicts(model):
             "-Z": (Gxl, Gxl),
         }
         return prepDict, measDict
+    elif "Gx" in found and "Gz" in found:
+        Gxl = found["Gx"]
+        Gzl = found["Gz"]
+
+        prepDict = {
+            "X": (Gxl,Gzl),
+            "Y": (Gxl,) * 3,
+            "Z": (),
+            "-X": (Gxl,Gzl) * 3,
+            "-Y": (Gxl,),
+            "-Z": (Gxl, Gxl),
+        }
+        measDict = {
+            "X": (Gxl,Gzl) * 3,
+            "Y": (Gxl,),
+            "Z": (),
+            "-X": (Gxl,Gzl),
+            "-Y": (Gxl,) * 3,
+            "-Z": (Gxl, Gxl),
+        }
+        return prepDict, measDict
 
     return None
 
@@ -1584,6 +1610,7 @@ def make_idle_tomography_list(
     preferred_prep_basis_signs="auto",
     preferred_meas_basis_signs="auto",
     force_fid_pairs=False,
+    qubit_labels = None,
 ):
     """
     Construct the list of experiments needed to perform idle tomography.
@@ -1663,7 +1690,7 @@ def make_idle_tomography_list(
         )
 
     fidpairs = [
-        (x.to_circuit(prepDict), y.to_circuit(measDict)) for x, y in pauli_fidpairs
+        (x.to_circuit(prepDict, qubit_labels), y.to_circuit(measDict, qubit_labels)) for x, y in pauli_fidpairs
     ]  # e.g. convert ("XY","ZX") to tuple of Circuits
 
     listOfExperiments = []

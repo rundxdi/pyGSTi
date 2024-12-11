@@ -137,7 +137,7 @@ class NQPauliState(object):
     def __hash__(self):
         return hash(str(self))
 
-    def to_circuit(self, pauli_basis_dict):
+    def to_circuit(self, pauli_basis_dict, qubit_labels = None):
         """
         Convert this Pauli basis state or measurement to a fiducial operation sequence.
 
@@ -170,7 +170,11 @@ class NQPauliState(object):
                     "'%s' is not in `pauli_basis_dict` (keys = %s)"
                     % (key, str(list(pauli_basis_dict.keys())))
                 )
-            opstr.extend([_Lbl(opname, i) for opname in pauli_basis_dict[key]])
+            if qubit_labels:
+                opstr.extend([_Lbl(opname, qubit_labels[i]) for opname in pauli_basis_dict[key]])
+                return _Circuit(opstr, line_labels=qubit_labels).parallelize()
+            else:
+                opstr.extend([_Lbl(opname, i) for opname in pauli_basis_dict[key]])
             # pauli_basis_dict just has 1Q gate *names* -- need to make into labels
         return _Circuit(opstr, num_lines=nQubits).parallelize()
 
