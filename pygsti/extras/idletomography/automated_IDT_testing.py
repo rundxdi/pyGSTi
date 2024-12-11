@@ -304,15 +304,15 @@ def length_rule(min_length=1, max_length=64, iter_rule="log"):
         return list(range(min_length, max_length + 1))
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     x = parse_json("why_would_i_do_this.json")
-#     # print(x)
-#     for k, v in x.items():
-#         print(k)
-#         print(type(k))
-#         exit()
-#     exit()
+    x = parse_json("why_would_i_do_this.json")
+    # print(x)
+    for k, v in x.items():
+        print(k)
+        print(type(k))
+        # exit()
+    exit()
 
 if __name__ == "__main__":
     num_qubits = [1, 2]
