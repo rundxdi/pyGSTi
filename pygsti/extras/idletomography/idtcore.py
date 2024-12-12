@@ -29,7 +29,7 @@ from pygsti.modelmembers import operations as _op
 from pygsti.baseobjs.verbosityprinter import VerbosityPrinter as _VerbosityPrinter
 from pygsti.circuits.circuit import Circuit as _Circuit
 from pygsti.baseobjs import Basis
-from itertools import product, permutations
+from itertools import product, permutations, combinations
 from pygsti.baseobjs import basisconstructors
 import stim
 
@@ -286,7 +286,7 @@ def gather_pauli_correlation_jacobian_coefs(pauliDict, numQubits, printFlag=Fals
     ident = pauliDict[identKey]
 
     pauliDictProduct = list(
-        _itertools.permutations([key for key in pauliDict.keys() if key != identKey], 2)
+        _itertools.combinations([key for key in pauliDict.keys() if key != identKey], 2)
     )
 
     pauliDictProduct = list(
@@ -339,7 +339,7 @@ def gather_anti_symmetric_jacobian_coefs(pauliDict, numQubits, printFlag=False):
     ident = pauliDict[identKey]
 
     pauliDictProduct = list(
-        _itertools.permutations([key for key in pauliDict.keys() if key != identKey], 2)
+        _itertools.combinations([key for key in pauliDict.keys() if key != identKey], 2)
     )
 
     pauliDictProduct = list(
@@ -445,7 +445,7 @@ def dict_to_jacobian(coef_dict, classification, numQubits, all_fidpairs):
         pauliDictProduct = dict(
             enumerate(
                 list(
-                    _itertools.permutations(
+                    _itertools.combinations(
                         [key for key in pauliDict.keys() if key != identKey], 2
                     )
                 )

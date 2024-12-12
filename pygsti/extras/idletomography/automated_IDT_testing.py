@@ -23,7 +23,7 @@ def generate_experiment_design_stuff(num_qubits, max_weight):
     )
 
     pauli_node_attributes = list([p for p in HS_index_iterator])
-    ca_pauli_node_attributes = list(_itertools.permutations(pauli_node_attributes, 2))
+    ca_pauli_node_attributes = list(_itertools.combinations(pauli_node_attributes, 2))
 
     def ca_pauli_weight_filter(pauli_pair, max_weight):
         used_indices_1 = set(
@@ -245,7 +245,10 @@ def parse_json(filename, num_qubits=2):
     with open(filename, "r") as fr:
         results = json.load(fr)
     for k, v in results.items():
-
+        for key in v.keys():
+            print(key)
+        exit()
+        print(k)
         parsed_key = parse_key(k)
         if parsed_key["error_gen_class"] in "HS":
             placeholder_str = ["_"] * num_qubits
@@ -271,6 +274,11 @@ def parse_json(filename, num_qubits=2):
             )
         placeholder_str = placeholder_str.replace("I", "_")
         print(placeholder_str, parsed_key["error_rate"], v.get(placeholder_str))
+        if not v.get(placeholder_str):
+            print(k)
+            print(placeholder_str)
+            print(v)
+            exit()
         # exit()
     return results
 
@@ -308,9 +316,10 @@ if __name__ == "__main__":
 
     x = parse_json("why_would_i_do_this.json")
     # print(x)
+    # exit()
     for k, v in x.items():
         print(k)
-        print(type(k))
+        # print(type(k))
         # exit()
     exit()
 
